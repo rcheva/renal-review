@@ -67,7 +67,6 @@ function AppContent() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <NotificationContainer />
       {registered ? (
         <div className={BASE}>
           <Header
@@ -118,6 +117,7 @@ export default function App() {
 
   return (
     <NotificationProvider>
+      <NotificationContainer />
       {session ? <AppContent /> : <LoginView />}
     </NotificationProvider>
   );
