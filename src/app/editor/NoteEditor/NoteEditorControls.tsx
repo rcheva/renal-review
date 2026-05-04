@@ -13,6 +13,7 @@ import {
   SuperscriptControl,
   UnderlineControl,
   UnlinkControl,
+  MediaUploadControl,
 } from "@/components/ui/RichTextEditorControls";
 import { useSettings } from "@/logic/settings/hooks/useSettings";
 import { Editor } from "@tiptap/react";
@@ -53,6 +54,10 @@ export const NoteEditorControls = memo(function NoteEditorControls({
         )}
 
         <ClearFormattingControl editor={editor} />
+      </RichTextEditor.ControlsGroup>
+
+      <RichTextEditor.ControlsGroup>
+        <MediaUploadControl editor={editor} />
       </RichTextEditor.ControlsGroup>
 
       <RichTextEditor.ControlsGroup>

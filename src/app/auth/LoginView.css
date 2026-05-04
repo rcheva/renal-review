@@ -1,0 +1,102 @@
+.login-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  padding: var(--spacing-xl);
+}
+
+.login-view__card {
+  background: var(--color-surface);
+  padding: var(--spacing-xxl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.login-view__card h1 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+}
+
+.login-view__card p {
+  color: var(--color-text-dimmed);
+  margin-bottom: var(--spacing-xl);
+  font-size: var(--font-size-sm);
+}
+
+.login-view__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  text-align: left;
+}
+
+.login-view__input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.login-view__input-group label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.login-view__input-group input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-fast);
+}
+
+.login-view__input-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.login-view__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.login-view__button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity var(--transition-fast);
+}
+
+.login-view__button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.login-view__button--primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.login-view__button--secondary {
+  background-color: transparent;
+  color: var(--color-text-dimmed);
+  border: 1px solid var(--color-border);
+}
+
+.login-view__button--secondary:hover:not(:disabled) {
+  background-color: var(--color-background-hover);
+}
