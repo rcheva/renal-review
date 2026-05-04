@@ -49,9 +49,9 @@
     "extract": "i18next --config i18next-parser.config.mjs 'src/**/*.{ts,tsx}'",
     "format": "biome check --apply",
     "tauri": "tauri",
-    "predeploy": "pnpm run build",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "build-and-deploy": "pnpm run predeploy && pnpm run deploy"
+    "build-and-deploy": "npm run predeploy && npm run deploy"
   },
   "eslintConfig": {
     "extends": [
