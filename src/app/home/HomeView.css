@@ -1,0 +1,181 @@
+.home-view__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-xl);
+}
+
+.home-view__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: var(--max-content-width);
+  max-width: 100%;
+  margin: 0 auto;
+  padding-bottom: var(--spacing-md);
+}
+
+.home-view__welcome-section {
+  text-align: center;
+  width: 100%;
+  padding: var(--spacing-3xl);
+  margin-bottom: var(--spacing-3xl);
+  border-bottom: 1px dotted var(--theme-neutral-200);
+}
+
+.home-view__welcome-title {
+  font-size: var(--font-size-xl);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--theme-neutral-900);
+  margin: 0;
+}
+
+.home-view__welcome-subtitle {
+  font-size: var(--font-size-md);
+  color: var(--theme-neutral-700);
+  margin: 0;
+}
+
+@media (max-width: 36rem) {
+  .home-view__welcome-section {
+    padding: var(--spacing-2xl);
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .home-view__welcome-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .home-view__welcome-subtitle {
+    font-size: var(--font-size-md);
+  }
+}
+
+.home-view__topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-3xl);
+}
+
+.home-view__topic-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-xl);
+  gap: var(--spacing-md);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: linear-gradient(145deg, var(--theme-neutral-000), var(--theme-neutral-50));
+  border: 1px solid var(--theme-neutral-200);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.home-view__topic-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--theme-primary-300);
+}
+
+.home-view__topic-card--has-new {
+  border-left: 4px solid var(--theme-primary-500);
+  background: linear-gradient(145deg, var(--theme-neutral-000), var(--theme-primary-50));
+}
+
+.home-view__topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.home-view__topic-title {
+  font-family: var(--font-serif);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--theme-primary-900);
+  margin: 0;
+}
+
+.home-view__topic-subdecks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.home-view__topic-subdeck-pill {
+  font-size: var(--font-size-xs);
+  padding: 4px 12px;
+  background-color: var(--theme-neutral-100);
+  color: var(--theme-neutral-700);
+  border-radius: 9999px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid var(--theme-neutral-200);
+}
+
+.home-view__topic-subdeck-pill:hover {
+  background-color: var(--theme-primary-100);
+  color: var(--theme-primary-700);
+  border-color: var(--theme-primary-300);
+}
+
+.home-view__topic-subdeck-pill--has-new {
+  background-color: var(--theme-primary-50);
+  color: var(--theme-primary-700);
+  border-color: var(--theme-primary-200);
+  box-shadow: 0 0 0 1px var(--theme-primary-100);
+}
+
+.home-view__section-title {
+  font-family: var(--font-serif);
+  font-size: var(--font-size-xl);
+  font-weight: 500;
+  color: var(--theme-neutral-900);
+  margin-bottom: var(--spacing-lg);
+}
+
+.home-view__filter-container {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.home-view__table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.home-view__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.home-view__table th,
+.home-view__table td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--theme-neutral-200);
+}
+
+.home-view__table th {
+  font-weight: 500;
+  color: var(--theme-neutral-500);
+  font-size: var(--font-size-sm);
+}
+
+.home-view__table tbody tr:hover {
+  background-color: var(--theme-neutral-50);
+}
+
+.home-view__table-link {
+  color: var(--theme-primary-600);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.home-view__table-link:hover {
+  text-decoration: underline;
+}
