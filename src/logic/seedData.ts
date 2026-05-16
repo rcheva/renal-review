@@ -107,13 +107,24 @@ export async function seedAllContent() {
       }
     ];
 
-    const newMaterials = materialsToInject.filter(
-      (mat) => !existingMaterials.some((ex) => ex.title === mat.title)
-    );
+    const updatedMaterials = [...existingMaterials];
+    let hasChanges = false;
+    for (const mat of materialsToInject) {
+      const idx = updatedMaterials.findIndex((ex) => ex.title === mat.title);
+      if (idx >= 0) {
+        if (updatedMaterials[idx].url !== mat.url) {
+          updatedMaterials[idx] = { ...updatedMaterials[idx], ...mat, id: updatedMaterials[idx].id };
+          hasChanges = true;
+        }
+      } else {
+        updatedMaterials.push(mat);
+        hasChanges = true;
+      }
+    }
 
-    if (newMaterials.length > 0) {
+    if (hasChanges) {
       await db.decks.update(ckdDeck.id, { 
-        studyMaterials: [...existingMaterials, ...newMaterials] 
+        studyMaterials: updatedMaterials 
       });
     }
   }
@@ -157,13 +168,24 @@ export async function seedAllContent() {
       return true;
     });
 
-    const newMaterials = validMaterials.filter(
-      (mat) => !existingMaterials.some((ex) => ex.title === mat.title)
-    );
+    const updatedMaterials = [...existingMaterials];
+    let hasChanges = false;
+    for (const mat of validMaterials) {
+      const idx = updatedMaterials.findIndex((ex) => ex.title === mat.title);
+      if (idx >= 0) {
+        if (updatedMaterials[idx].url !== mat.url) {
+          updatedMaterials[idx] = { ...updatedMaterials[idx], ...mat, id: updatedMaterials[idx].id };
+          hasChanges = true;
+        }
+      } else {
+        updatedMaterials.push(mat);
+        hasChanges = true;
+      }
+    }
 
-    if (newMaterials.length > 0) {
+    if (hasChanges) {
       await db.decks.update(akiDeck.id, { 
-        studyMaterials: [...existingMaterials, ...newMaterials] 
+        studyMaterials: updatedMaterials 
       });
     }
   }
