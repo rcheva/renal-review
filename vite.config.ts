@@ -9,7 +9,7 @@ import viteTsconfigPaths from "vite-tsconfig-paths";
 const pkg = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
 
 export default defineConfig({
-  base: "/renal-review/",
+  base: process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM ? "/" : "/renal-review/",
   css: {
     modules: {},
   },
@@ -31,7 +31,7 @@ export default defineConfig({
     }),
     viteTsconfigPaths(),
     Checker({ typescript: true }),
-    VitePWA({
+    ...(process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM ? [] : [VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["logo.svg", "logo256.png", "logo512.png", "fonts/**/*"],
       manifest: {
@@ -96,7 +96,7 @@ export default defineConfig({
           },
         ],
       },
-    }),
+    })]),
   ],
   clearScreen: false,
   server: {
@@ -104,6 +104,12 @@ export default defineConfig({
   },
   envPrefix: [
     "VITE_",
+    "TAURI_ENV_PLATFORM",
+    "TAURI_ENV_ARCH",
+    "TAURI_ENV_FAMILY",
+    "TAURI_ENV_PLATFORM_VERSION",
+    "TAURI_ENV_PLATFORM_TYPE",
+    "TAURI_ENV_DEBUG",
     "TAURI_PLATFORM",
     "TAURI_ARCH",
     "TAURI_FAMILY",
@@ -113,8 +119,8 @@ export default defineConfig({
   ],
   build: {
     outDir: "dist",
-    target: process.env.TAURI_PLATFORM === "windows" ? "chrome105" : "safari13",
-    minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
-    sourcemap: !!process.env.TAURI_DEBUG,
+    target: (process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM) === "windows" ? "chrome105" : "safari13",
+    minify: !(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG) ? "esbuild" : false,
+    sourcemap: !!(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG),
   },
 });

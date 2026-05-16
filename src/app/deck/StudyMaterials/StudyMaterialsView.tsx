@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 import AddMaterialModal from "./AddMaterialModal";
 import MaterialViewer from "./MaterialViewer";
+import LLMDownloadButton from "./LLMDownloadButton";
 import EmptyNotice from "@/components/EmptyNotice";
 
 interface StudyMaterialsViewProps {
@@ -51,10 +52,13 @@ export default function StudyMaterialsView({ deck }: StudyMaterialsViewProps) {
   return (
     <div style={{ padding: "var(--spacing-xl) 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-        <Text size="lg" weight="semibold">NotebookLM Materials</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setAddModalOpen(true)}>
-          Add Material
-        </Button>
+        <Text size="lg" weight="semibold">Study Materials & Guides</Text>
+        <div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
+          <LLMDownloadButton deck={deck} />
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setAddModalOpen(true)}>
+            Add Material
+          </Button>
+        </div>
       </div>
 
       {materials.length === 0 ? (

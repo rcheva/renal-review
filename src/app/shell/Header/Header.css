@@ -41,3 +41,16 @@
   align-items: center;
   justify-content: space-between;
 }
+
+.header__sync-indicator {
+  font-size: 0.75rem;
+  color: var(--theme-neutral-500);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.header__sync-indicator--active {
+  color: var(--theme-blue-500);
+}

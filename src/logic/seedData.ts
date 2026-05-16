@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { newDeck } from "./deck/newDeck";
 import { BasicNoteTypeAdapter } from "./type-implementations/normal/BasicNote";
-import { ckdAudioOverviewUrl, ckdBriefingDoc, ckdSlideDeckUrl, ckdStudyGuide } from "./notebookLMData";
+import { ckdAudioOverviewUrl, ckdBriefingDocUrl, ckdSlideDeckUrl, ckdStudyGuideUrl, akiAudioOverviewUrl, akiBriefingDocUrl, akiSlideDeckUrl, akiStudyGuideUrl } from "./notebookLMData";
 import { v4 as uuidv4 } from "uuid";
 
 const topics = [
@@ -93,16 +93,16 @@ export async function seedAllContent() {
       },
       {
         id: uuidv4(),
-        type: "resume" as const,
+        type: "doc" as const,
         title: "KDIGO 2024 Briefing Document",
-        content: ckdBriefingDoc,
+        url: ckdBriefingDocUrl,
         createdAt: new Date(),
       },
       {
         id: uuidv4(),
         type: "doc" as const,
         title: "Comprehensive CKD Study Guide",
-        content: ckdStudyGuide,
+        url: ckdStudyGuideUrl,
         createdAt: new Date(),
       }
     ];
@@ -118,6 +118,56 @@ export async function seedAllContent() {
     }
   }
   const akiDeck = getTopicDeck("AKI");
+
+  if (akiDeck) {
+    const existingMaterials = akiDeck.studyMaterials || [];
+    const materialsToInject = [
+      {
+        id: uuidv4(),
+        type: "audio" as const,
+        title: "AKI and Critical Care Nephrology Audio Overview",
+        url: akiAudioOverviewUrl,
+        createdAt: new Date(),
+      },
+      {
+        id: uuidv4(),
+        type: "ppt" as const,
+        title: "AKI 2024 Playbook",
+        url: akiSlideDeckUrl,
+        createdAt: new Date(),
+      },
+      {
+        id: uuidv4(),
+        type: "doc" as const,
+        title: "AKI 2024 Briefing Document",
+        url: akiBriefingDocUrl,
+        createdAt: new Date(),
+      },
+      {
+        id: uuidv4(),
+        type: "doc" as const,
+        title: "Comprehensive AKI Study Guide",
+        url: akiStudyGuideUrl,
+        createdAt: new Date(),
+      }
+    ];
+
+    const validMaterials = materialsToInject.filter(m => {
+      if ((m.type === 'audio' || m.type === 'ppt') && !m.url) return false;
+      return true;
+    });
+
+    const newMaterials = validMaterials.filter(
+      (mat) => !existingMaterials.some((ex) => ex.title === mat.title)
+    );
+
+    if (newMaterials.length > 0) {
+      await db.decks.update(akiDeck.id, { 
+        studyMaterials: [...existingMaterials, ...newMaterials] 
+      });
+    }
+  }
+
   const electroDeck = getTopicDeck("Electrolytes");
 
   // Create Subdecks and seed questions

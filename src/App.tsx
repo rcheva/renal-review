@@ -24,6 +24,7 @@ import { useLocalStorage } from "./lib/hooks/useLocalStorage";
 import { useMediaQuery } from "./lib/hooks/useMediaQuery";
 import { useDeckStatsCacheInit } from "./logic/deck/hooks/useDeckStatsCacheInit";
 import { useSetting } from "./logic/settings/hooks/useSetting";
+import { SyncManagerProvider } from "./logic/sync/SyncManager";
 
 const BASE = "app-shell";
 
@@ -118,7 +119,13 @@ export default function App() {
   return (
     <NotificationProvider>
       <NotificationContainer />
-      {session ? <AppContent /> : <LoginView />}
+      {session ? (
+        <SyncManagerProvider>
+          <AppContent />
+        </SyncManagerProvider>
+      ) : (
+        <LoginView />
+      )}
     </NotificationProvider>
   );
 }

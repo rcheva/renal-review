@@ -1,6 +1,6 @@
 .notebooklm-view {
   padding: 2rem;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
   color: var(--text-primary, #333);
@@ -14,6 +14,8 @@
   padding-bottom: 1rem;
   border-bottom: 1px solid rgba(0,0,0,0.1);
   color: var(--color-primary, #2563eb);
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .notebooklm-header h1 {
@@ -134,4 +136,211 @@
 .notebooklm-response p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.notebooklm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.notebooklm-status.connected {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.notebooklm-status.disconnected {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.notebooklm-status.connected .status-dot {
+  background-color: #10b981;
+}
+
+.notebooklm-status.disconnected .status-dot {
+  background-color: #ef4444;
+}
+
+/* Tabs Navigation */
+.notebooklm-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #374151;
+}
+
+.tab-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* Materials Launcher Styles */
+.notebooklm-materials-launcher {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 2.5rem;
+  min-height: 500px;
+}
+
+.materials-launcher-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.topic-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: #f3f4f6;
+  padding: 0.5rem;
+  border-radius: 12px;
+}
+
+.topic-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.topic-btn.active {
+  background: white;
+  color: #2563eb;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.topic-btn:hover:not(.active) {
+  color: #374151;
+}
+
+.sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sync-btn:hover {
+  background: #dcfce7;
+  transform: translateY(-1px);
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.material-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.material-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0);
+  transition: all 0.3s ease;
+  transform-origin: left;
+}
+
+.material-card:hover {
+  background: white;
+  border-color: transparent;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-4px);
+}
+
+.material-card:hover::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.material-icon {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.material-card:hover .material-icon {
+  transform: scale(1.15);
+}
+
+.material-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.material-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
 }

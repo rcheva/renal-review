@@ -55,3 +55,34 @@
 .cloud-settings__btn--danger:hover:not(:disabled) {
   background-color: var(--color-red-0);
 }
+
+.cloud-settings__toggle {
+  background-color: var(--theme-neutral-50);
+  border: 1px solid var(--theme-neutral-200);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.cloud-settings__toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: var(--spacing-xs);
+}
+
+.cloud-settings__toggle-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--theme-blue-500);
+}
+
+.cloud-settings__status-text {
+  font-size: var(--font-size-sm);
+  color: var(--theme-neutral-500);
+  margin: 0;
+  padding-left: calc(1.2rem + var(--spacing-sm));
+}

@@ -3,6 +3,7 @@ import { db } from "@/logic/db";
 import { Deck, MaterialType, StudyMaterial } from "@/logic/deck/deck";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 interface AddMaterialModalProps {
   deck: Deck;
@@ -51,6 +52,26 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
     onClose();
   };
 
+  const handleBrowseFile = async () => {
+    try {
+      const selectedPath = await openDialog({
+        multiple: false,
+        directory: false,
+        defaultPath: "/Users/julio/Library/CloudStorage/OneDrive-Personal/renal review",
+      });
+      if (selectedPath && typeof selectedPath === 'string') {
+        setUrl(selectedPath);
+        if (!title.trim()) {
+           // Autocomplete title from filename if empty
+           const filename = selectedPath.split(/[/\\]/).pop() || "";
+           setTitle(filename);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to open file dialog", err);
+    }
+  };
+
   return (
     <Modal opened={opened} onClose={onClose} title="Add Study Material (NotebookLM Export)">
       <Stack gap="md">
@@ -69,13 +90,20 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
           onChange={(val) => setType(val as MaterialType)}
         />
 
-        <TextInput
-          label="Resource URL (Optional)"
-          placeholder="https://..."
-          description="Paste the link to the audio, video, or PDF file"
-          value={url}
-          onChange={(e) => setUrl(e.currentTarget.value)}
-        />
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "var(--spacing-sm)" }}>
+          <div style={{ flex: 1 }}>
+            <TextInput
+              label="Resource URL or Local Path"
+              placeholder="https://... or /Users/..."
+              description="Paste the link or the local absolute path to your file"
+              value={url}
+              onChange={(e) => setUrl(e.currentTarget.value)}
+            />
+          </div>
+          <Button variant="subtle" onClick={handleBrowseFile} style={{ marginBottom: "var(--spacing-md)" }}>
+            Browse...
+          </Button>
+        </div>
 
         <Textarea
           label="Text Content (Optional)"

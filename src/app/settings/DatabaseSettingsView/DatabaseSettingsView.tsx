@@ -38,6 +38,18 @@ export default function DatabaseSettingsView() {
         >
           Export All
         </Button>
+        <Button
+          style={{ marginLeft: 10 }}
+          leftSection={<IconDatabaseImport />}
+          onClick={async () => {
+            const { seedAllContent } = await import("../../../logic/seedData");
+            await seedAllContent();
+            alert("Study materials synced successfully! The dashboard will now reflect the latest content.");
+            window.location.reload();
+          }}
+        >
+          Sync Latest Course Material
+        </Button>
         <Section title="Danger Zone" className={`${BASE}__danger-zone`}>
           <p className={`${BASE}__danger-text`}>
             This section contains potentially dangerous settings. Proceed with

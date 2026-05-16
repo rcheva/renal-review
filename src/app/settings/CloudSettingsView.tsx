@@ -4,6 +4,9 @@ import { supabase } from "@/logic/supabase";
 import { db } from "@/logic/db";
 import { exportDB, importInto } from "dexie-export-import";
 import { useAuthSession } from "@/app/auth/useAuthSession";
+import { useSetting } from "@/logic/settings/hooks/useSetting";
+import { setSetting } from "@/logic/settings/setSetting";
+import { useSyncManager } from "@/logic/sync/SyncManager";
 import Section from "./Section";
 import "./CloudSettingsView.css";
 
@@ -11,6 +14,8 @@ export default function CloudSettingsView() {
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotifications();
   const { session } = useAuthSession();
+  const [autoSyncEnabled] = useSetting("#cloud_autoSyncEnabled");
+  const { lastSyncedAt, isSyncing } = useSyncManager();
 
   const handleBackup = async () => {
     if (!session?.user) return;
@@ -92,6 +97,20 @@ export default function CloudSettingsView() {
         <p className="cloud-settings__desc">
           Logged in as <strong>{session.user.email}</strong>. Use these buttons to manually sync your decks to and from the cloud.
         </p>
+        
+        <div className="cloud-settings__toggle">
+          <label className="cloud-settings__toggle-label">
+            <input 
+              type="checkbox" 
+              checked={autoSyncEnabled} 
+              onChange={(e) => setSetting("#cloud_autoSyncEnabled", e.target.checked)}
+            />
+            Enable Background Auto-Sync
+          </label>
+          <p className="cloud-settings__status-text">
+            {isSyncing ? "Syncing right now..." : (lastSyncedAt ? `Last synced: ${new Date(lastSyncedAt).toLocaleString()}` : 'Never synced automatically.')}
+          </p>
+        </div>
         <div className="cloud-settings__actions">
           <button 
             className="cloud-settings__btn cloud-settings__btn--primary" 

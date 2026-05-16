@@ -1,6 +1,8 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_shell::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -9,6 +11,15 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      #[cfg(desktop)]
+      {
+         // Start the background node proxy for NotebookLM on Mac
+         let _ = std::process::Command::new("/usr/local/bin/node")
+             .arg("/Users/julio/projects/Renal_Review/skola-main/server/mcpProxy.mjs")
+             .spawn();
+      }
+
       Ok(())
     })
     .run(tauri::generate_context!())

@@ -38,4 +38,7 @@ export interface SettingsValues {
   "#globalScheduler_maximumInterval": number;
   "#globalScheduler_requestRetention": number;
   "#globalScheduler_w": string;
+
+  "#cloud_lastSyncedAt": number;
+  "#cloud_autoSyncEnabled": boolean;
 }

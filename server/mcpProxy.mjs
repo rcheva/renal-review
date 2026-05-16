@@ -43,13 +43,15 @@ app.get('/api/notebooks', async (req, res) => {
     
     let content = result.content[0].text;
     const data = JSON.parse(content);
+    console.log("Notebooks data:", data);
     
     if (data.error) {
       return res.status(500).json({ error: data.error });
     }
     
     // Filter notebooks that start with a number (e.g. "01_CKD")
-    const filtered = data.notebooks.filter(n => /^\d/.test(n.name || n.title));
+    const notebooksArray = Array.isArray(data) ? data : (data.notebooks || []);
+    const filtered = notebooksArray.filter(n => /^\d/.test(n.name || n.title));
     res.json({ notebooks: filtered });
   } catch (error) {
     console.error("Error fetching notebooks:", error);
