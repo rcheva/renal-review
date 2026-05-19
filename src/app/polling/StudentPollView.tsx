@@ -16,6 +16,7 @@ export default function StudentPollView() {
   const [studentName, setStudentName] = useState("");
   const [hospital, setHospital] = useState("MRHT");
   const [hasStarted, setHasStarted] = useState(false);
+  const [studentResponses, setStudentResponses] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (pollId) {
@@ -40,6 +41,8 @@ export default function StudentPollView() {
     setHasSubmitted(true);
 
     const q = questions[currentQuestionIndex];
+    setStudentResponses(prev => ({ ...prev, [q.id]: index }));
+    
     await supabase.from("responses").insert([{
       question_id: q.id,
       selected_option_index: index,
@@ -170,24 +173,47 @@ export default function StudentPollView() {
                 <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {q.options.map((opt, optIndex) => {
                     const isCorrect = optIndex === q.correct_option_index;
+                    const isSelected = studentResponses[q.id] === optIndex;
+                    
+                    let bgColor = "var(--theme-neutral-50)";
+                    let borderColor = "var(--theme-neutral-200)";
+                    let textColor = "inherit";
+                    
+                    if (isCorrect) {
+                      bgColor = "var(--theme-green-50)";
+                      borderColor = "var(--theme-green-200)";
+                      textColor = "var(--theme-green-800)";
+                    } else if (isSelected) {
+                      bgColor = "var(--theme-red-50)";
+                      borderColor = "var(--theme-red-200)";
+                      textColor = "var(--theme-red-800)";
+                    }
+
                     return (
                       <li key={optIndex} style={{ 
                         padding: "0.75rem", 
                         borderRadius: "6px", 
-                        backgroundColor: isCorrect ? "var(--theme-green-50)" : "var(--theme-neutral-50)",
-                        border: isCorrect ? "1px solid var(--theme-green-200)" : "1px solid var(--theme-neutral-200)",
-                        color: isCorrect ? "var(--theme-green-800)" : "inherit",
+                        backgroundColor: bgColor,
+                        border: `1px solid ${borderColor}`,
+                        color: textColor,
                         display: "flex",
                         alignItems: "center",
                         gap: "0.5rem",
-                        fontWeight: isCorrect ? 600 : 400
+                        fontWeight: isCorrect || isSelected ? 600 : 400
                       }}>
                         {isCorrect && <IconCheck size={18} color="var(--theme-green-600)" />}
+                        {isSelected && !isCorrect && <strong style={{ color: "var(--theme-red-600)", padding: "0 2px" }}>✕</strong>}
                         {opt}
+                        {isSelected && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: isCorrect ? "var(--theme-green-700)" : "var(--theme-red-700)", fontWeight: "bold" }}>YOUR ANSWER</span>}
                       </li>
                     );
                   })}
                 </ul>
+                {studentResponses[q.id] === -1 && (
+                  <div style={{ marginTop: "0.5rem", color: "var(--theme-neutral-500)", fontSize: "0.875rem", fontStyle: "italic", padding: "0.5rem", backgroundColor: "var(--theme-neutral-100)", borderRadius: "4px" }}>
+                    You skipped this question.
+                  </div>
+                )}
                 {q.explanation && (
                   <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "var(--theme-blue-50)", borderLeft: "4px solid var(--theme-blue-500)", borderRadius: "4px", fontSize: "0.875rem" }}>
                     <strong>Explanation:</strong> {q.explanation}
@@ -252,6 +278,7 @@ export default function StudentPollView() {
                 borderRadius: "8px",
                 border: "2px solid var(--theme-neutral-200)",
                 backgroundColor: "white",
+                color: "var(--theme-neutral-900)",
                 cursor: hasSubmitted ? "default" : "pointer",
                 textAlign: "left",
                 fontSize: "1.125rem",
@@ -262,12 +289,14 @@ export default function StudentPollView() {
                 if (!hasSubmitted) {
                   e.currentTarget.style.borderColor = "var(--theme-blue-400)";
                   e.currentTarget.style.backgroundColor = "var(--theme-blue-50)";
+                  e.currentTarget.style.color = "var(--theme-blue-900)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!hasSubmitted) {
                   e.currentTarget.style.borderColor = "var(--theme-neutral-200)";
                   e.currentTarget.style.backgroundColor = "white";
+                  e.currentTarget.style.color = "var(--theme-neutral-900)";
                 }
               }}
             >
