@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/logic/supabase";
 import { Poll, Question } from "./types";
-import { Button, Paper } from "@/components/ui";
+import { Button, Paper, TextInput } from "@/components/ui";
 import { useParams } from "react-router-dom";
 import { IconCheck, IconDownload } from "@tabler/icons-react";
 
@@ -12,6 +12,10 @@ export default function StudentPollView() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState("");
+  
+  const [studentName, setStudentName] = useState("");
+  const [hospital, setHospital] = useState("MRHT");
+  const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
     if (pollId) {
@@ -38,7 +42,9 @@ export default function StudentPollView() {
     const q = questions[currentQuestionIndex];
     await supabase.from("responses").insert([{
       question_id: q.id,
-      selected_option_index: index
+      selected_option_index: index,
+      respondent_name: studentName.trim() || null,
+      hospital: hospital.trim() || null
     }]);
 
     setCurrentQuestionIndex(prev => prev + 1);
@@ -195,6 +201,36 @@ export default function StudentPollView() {
     );
   }
 
+  if (!hasStarted && poll.status === "active") {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "var(--theme-neutral-50)" }}>
+        <Paper withBorder style={{ padding: "3rem", maxWidth: 500, width: "100%" }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", marginBottom: "1rem", textAlign: "center" }}>Join Poll</h1>
+          <p style={{ color: "var(--theme-neutral-600)", marginBottom: "2rem", textAlign: "center" }}>
+            Enter your details to participate. Both fields are optional.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+            <TextInput
+              label="Name (Optional)"
+              placeholder="e.g. Dr. Smith"
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+            />
+            <TextInput
+              label="Hospital (Optional)"
+              placeholder="e.g. MRHT"
+              value={hospital}
+              onChange={(e) => setHospital(e.target.value)}
+            />
+          </div>
+          <Button size="lg" style={{ width: "100%" }} onClick={() => setHasStarted(true)}>
+            Start Poll
+          </Button>
+        </Paper>
+      </div>
+    );
+  }
+
   const q = questions[currentQuestionIndex];
 
   return (
@@ -238,6 +274,17 @@ export default function StudentPollView() {
               {opt}
             </button>
           ))}
+        </div>
+
+        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
+          <Button 
+            variant="ghost" 
+            onClick={() => handleOptionClick(-1)}
+            disabled={hasSubmitted}
+            style={{ color: "var(--theme-neutral-500)" }}
+          >
+            Leave Blank / Skip
+          </Button>
         </div>
       </Paper>
     </div>

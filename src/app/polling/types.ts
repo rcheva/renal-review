@@ -18,6 +18,8 @@ export interface Question {
 export interface Response {
   id: string;
   question_id: string;
-  selected_option_index: number;
+  selected_option_index: number; // -1 represents skipped/no answer
+  respondent_name?: string | null;
+  hospital?: string | null;
   created_at: string;
 }

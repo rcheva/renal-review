@@ -261,9 +261,16 @@ Here are the flashcards:\n\n`;
               Export Answer Key
             </Button>
             <Button 
-              variant={poll.status === "active" ? "default" : "primary"}
               onClick={togglePollStatus}
-              style={{ backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-green-600)", color: "white" }}
+              style={{ 
+                backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-green-600)", 
+                color: "white",
+                border: "none",
+                fontWeight: "bold",
+                padding: "0.5rem 1rem",
+                borderRadius: "4px",
+                cursor: "pointer"
+              }}
             >
               {poll.status === "active" ? "Close Poll" : "Open Poll"}
             </Button>

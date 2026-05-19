@@ -9,6 +9,7 @@ import {
   IconHome,
   IconRobot,
   IconSettings,
+  IconTrophy,
   IconX,
 } from "@tabler/icons-react";
 import { t } from "i18next";
@@ -105,7 +106,7 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
             <NavItem
               label={"Live Polling"}
               path="/polling"
-              icon={<IconChartBar />}
+              icon={<IconTrophy />}
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
             />
