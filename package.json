@@ -79,7 +79,7 @@
     "@biomejs/biome": "1.9.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@react-grab/mcp": "^0.1.18",
-    "@tauri-apps/cli": "^2.10.0",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/html-to-text": "^9.0.4",
     "@types/lodash": "4.17.0",
     "@types/node": "22.5.5",
