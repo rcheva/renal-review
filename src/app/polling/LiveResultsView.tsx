@@ -94,13 +94,13 @@ export default function LiveResultsView() {
             >
               Reset Results
             </Button>
-            <div style={{ padding: "0.5rem 1rem", borderRadius: "100px", backgroundColor: poll.status === "active" ? "var(--theme-green-100)" : "var(--theme-red-100)", color: poll.status === "active" ? "var(--theme-green-800)" : "var(--theme-red-800)", fontWeight: "bold" }}>
+            <div style={{ padding: "0.5rem 1rem", borderRadius: "100px", backgroundColor: poll.status === "active" ? "var(--theme-primary-100)" : "var(--theme-red-100)", color: poll.status === "active" ? "var(--theme-primary-800)" : "var(--theme-red-800)", fontWeight: "bold" }}>
               {poll.status === "active" ? "LIVE - Accepting Responses" : "CLOSED"}
             </div>
             <Button 
               onClick={togglePollStatus}
               style={{ 
-                backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-green-600)", 
+                backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-primary-600)", 
                 color: "white",
                 border: "none",
                 fontWeight: "bold",
@@ -295,7 +295,7 @@ export default function LiveResultsView() {
                         </td>
                         <td style={{ padding: "1rem" }}>{p.name}</td>
                         <td style={{ padding: "1rem" }}>{p.hospital}</td>
-                        <td style={{ padding: "1rem", fontWeight: "bold", color: "var(--theme-green-600)" }}>{p.score}</td>
+                        <td style={{ padding: "1rem", fontWeight: "bold", color: "var(--theme-primary-600)" }}>{p.score}</td>
                         <td style={{ padding: "1rem", color: "var(--theme-neutral-500)" }}>{p.totalAnswered}</td>
                       </tr>
                     ))}

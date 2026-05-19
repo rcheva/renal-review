@@ -490,7 +490,7 @@ export default function LLMDownloadButton({ deck }: LLMDownloadButtonProps) {
                             {isSynced ? (
                               <IconCheck size={16} color="teal" />
                             ) : (
-                              <IconFile size={16} color="var(--theme-primary)" />
+                              <IconFile size={16} color="var(--theme-primary-500)" />
                             )}
                             <span>
                               {file} {isSynced && "(Already synced)"}
@@ -537,7 +537,7 @@ export default function LLMDownloadButton({ deck }: LLMDownloadButtonProps) {
                       return (
                         <li key={artifact.artifact_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--theme-border-subtle)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <IconCloudDownload size={16} color="var(--theme-primary)" />
+                            <IconCloudDownload size={16} color="var(--theme-primary-500)" />
                             <Text size="sm">{artifact.title} ({artifact.type === 'report' ? artifact.report_content || 'Report' : artifact.type})</Text>
                           </div>
                           {isDownloaded ? (

@@ -174,7 +174,7 @@ export default function NotebookLMView() {
                 style={{
                   padding: "4px 12px",
                   fontSize: "12px",
-                  background: "var(--theme-primary)",
+                  background: "var(--theme-primary-600)",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",

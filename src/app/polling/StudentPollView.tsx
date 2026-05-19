@@ -154,7 +154,7 @@ export default function StudentPollView() {
               </>
             ) : (
               <>
-                <IconCheck size={48} color="var(--theme-green-500)" style={{ marginBottom: "1rem" }} />
+                <IconCheck size={48} color="var(--theme-primary-500)" style={{ marginBottom: "1rem" }} />
                 <h1 style={{ fontFamily: "var(--font-serif)", marginBottom: "0.5rem" }}>You're all done!</h1>
                 <p style={{ color: "var(--theme-neutral-600)" }}>Thank you for participating. Here is the answer key for your review.</p>
               </>
@@ -180,9 +180,9 @@ export default function StudentPollView() {
                     let textColor = "inherit";
                     
                     if (isCorrect) {
-                      bgColor = "var(--theme-green-50)";
-                      borderColor = "var(--theme-green-200)";
-                      textColor = "var(--theme-green-800)";
+                      bgColor = "var(--theme-primary-50)";
+                      borderColor = "var(--theme-primary-200)";
+                      textColor = "var(--theme-primary-800)";
                     } else if (isSelected) {
                       bgColor = "var(--theme-red-50)";
                       borderColor = "var(--theme-red-200)";
@@ -201,10 +201,10 @@ export default function StudentPollView() {
                         gap: "0.5rem",
                         fontWeight: isCorrect || isSelected ? 600 : 400
                       }}>
-                        {isCorrect && <IconCheck size={18} color="var(--theme-green-600)" />}
+                        {isCorrect && <IconCheck size={18} color="var(--theme-primary-600)" />}
                         {isSelected && !isCorrect && <strong style={{ color: "var(--theme-red-600)", padding: "0 2px" }}>✕</strong>}
                         {opt}
-                        {isSelected && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: isCorrect ? "var(--theme-green-700)" : "var(--theme-red-700)", fontWeight: "bold" }}>YOUR ANSWER</span>}
+                        {isSelected && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: isCorrect ? "var(--theme-primary-700)" : "var(--theme-red-700)", fontWeight: "bold" }}>YOUR ANSWER</span>}
                       </li>
                     );
                   })}

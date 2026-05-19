@@ -64,7 +64,7 @@ const InnerCard = memo(
           position: "relative",
           padding: 0,
           cursor: "pointer",
-          borderColor: isSelected ? "var(--theme-primary)" : undefined,
+          borderColor: isSelected ? "var(--theme-primary-500)" : undefined,
           borderWidth: isSelected ? 2 : 1,
         }}
       >
@@ -73,7 +73,7 @@ const InnerCard = memo(
           showAnswer ? "strict" : answerToggled ? "optional" : "none"
         )}
         {selectionMode && (
-          <div style={{ position: "absolute", top: "var(--spacing-sm)", left: "var(--spacing-sm)", color: isSelected ? "var(--theme-primary)" : "var(--theme-neutral-300)" }}>
+          <div style={{ position: "absolute", top: "var(--spacing-sm)", left: "var(--spacing-sm)", color: isSelected ? "var(--theme-primary-500)" : "var(--theme-neutral-300)" }}>
             {isSelected ? <IconCircleCheckFilled /> : <IconCircle />}
           </div>
         )}

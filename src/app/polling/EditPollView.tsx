@@ -263,7 +263,7 @@ Here are the flashcards:\n\n`;
             <Button 
               onClick={togglePollStatus}
               style={{ 
-                backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-green-600)", 
+                backgroundColor: poll.status === "active" ? "var(--theme-red-600)" : "var(--theme-primary-600)", 
                 color: "white",
                 border: "none",
                 fontWeight: "bold",
@@ -315,7 +315,7 @@ Here are the flashcards:\n\n`;
               </div>
               <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
                 {q.options.map((opt, oIndex) => (
-                  <li key={oIndex} style={{ padding: "0.5rem 0", display: "flex", alignItems: "center", gap: "0.5rem", color: q.correct_option_index === oIndex ? "var(--theme-green-600)" : "inherit" }}>
+                  <li key={oIndex} style={{ padding: "0.5rem 0", display: "flex", alignItems: "center", gap: "0.5rem", color: q.correct_option_index === oIndex ? "var(--theme-primary-600)" : "inherit" }}>
                     {q.correct_option_index === oIndex && <IconCheck size={16} />}
                     {opt}
                   </li>
@@ -333,7 +333,7 @@ Here are the flashcards:\n\n`;
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h2 style={{ fontFamily: "var(--font-serif)", margin: 0 }}>Add New Question</h2>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Button variant="default" leftSection={<IconBrain size={16} color="var(--theme-primary)" />} onClick={() => setIsAiModalOpen(true)}>
+            <Button variant="default" leftSection={<IconBrain size={16} color="var(--theme-primary-500)" />} onClick={() => setIsAiModalOpen(true)}>
               Import via AI
             </Button>
           </div>

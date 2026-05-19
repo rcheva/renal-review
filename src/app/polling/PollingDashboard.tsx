@@ -93,7 +93,7 @@ export default function PollingDashboard() {
                 <div>
                   <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.25rem" }}>{poll.title}</h3>
                   <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
-                    <span>Status: <strong style={{ color: poll.status === "active" ? "var(--theme-green-600)" : "inherit" }}>{poll.status.toUpperCase()}</strong></span>
+                    <span>Status: <strong style={{ color: poll.status === "active" ? "var(--theme-primary-600)" : "inherit" }}>{poll.status.toUpperCase()}</strong></span>
                     <span>Created: {new Date(poll.created_at).toLocaleDateString()}</span>
                     <span>Questions: {(poll as any).questions?.[0]?.count || 0}</span>
                   </div>
