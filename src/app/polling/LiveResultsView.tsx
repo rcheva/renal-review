@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { QRCodeSVG } from "qrcode.react";
 import { TextInput, Button } from "@/components/ui";
 import { IconCopy, IconBrandWhatsapp, IconRefresh, IconTrophy, IconChartBar, IconDownload } from "@tabler/icons-react";
+import parse from "html-react-parser";
 
 export default function LiveResultsView() {
   const { pollId } = useParams();
@@ -167,7 +168,7 @@ export default function LiveResultsView() {
 
               return (
                 <Paper key={q.id} withBorder style={{ padding: "1.5rem" }}>
-                  <h3 style={{ marginTop: 0, marginBottom: "0.5rem" }}>{i + 1}. {q.question_text}</h3>
+                  <div style={{ marginTop: 0, marginBottom: "0.5rem", fontSize: "1.125rem", fontWeight: "bold" }}>{i + 1}. {parse(q.question_text)}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", marginBottom: "1.5rem" }}>
                     {q.options.map((opt, optIndex) => (
                       <div key={optIndex} style={{ fontSize: "0.875rem", padding: "0.25rem 0.5rem", backgroundColor: "var(--theme-neutral-100)", borderRadius: "4px" }}>

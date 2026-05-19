@@ -4,6 +4,7 @@ import { Poll, Question } from "./types";
 import { Button, Paper, TextInput } from "@/components/ui";
 import { useParams } from "react-router-dom";
 import { IconCheck, IconDownload } from "@tabler/icons-react";
+import parse from "html-react-parser";
 
 export default function StudentPollView() {
   const { pollId } = useParams();
@@ -169,7 +170,7 @@ export default function StudentPollView() {
           <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
             {questions.map((q, i) => (
               <div key={q.id} style={{ padding: "1.5rem", backgroundColor: "white", borderRadius: "8px", border: "1px solid var(--theme-neutral-200)" }}>
-                <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.125rem", lineHeight: 1.4 }}>{i + 1}. {q.question_text}</h3>
+                <div style={{ margin: "0 0 1rem 0", fontSize: "1.125rem", lineHeight: 1.4, fontWeight: "bold" }}>{i + 1}. {parse(q.question_text)}</div>
                 <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {q.options.map((opt, optIndex) => {
                     const isCorrect = optIndex === q.correct_option_index;
@@ -266,7 +267,7 @@ export default function StudentPollView() {
           Question {currentQuestionIndex + 1} of {questions.length}
         </div>
         
-        <h2 style={{ fontSize: "1.5rem", marginBottom: "2rem", lineHeight: 1.4 }}>{q.question_text}</h2>
+        <div style={{ fontSize: "1.5rem", marginBottom: "2rem", lineHeight: 1.4, fontWeight: "bold" }}>{parse(q.question_text)}</div>
         
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {q.options.map((opt, i) => (
