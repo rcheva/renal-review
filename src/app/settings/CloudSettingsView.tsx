@@ -92,7 +92,7 @@ export default function CloudSettingsView() {
   }
 
   return (
-    <Section title="Cloud Sync">
+    <Section title="Sync Flashcards">
       <div className="cloud-settings">
         <p className="cloud-settings__desc">
           Logged in as <strong>{session.user.email}</strong>. Use these buttons to manually sync your decks to and from the cloud.

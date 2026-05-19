@@ -7,7 +7,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { exportDB, importInto } from "dexie-export-import";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../../logic/db";
 import { supabase } from "../../../logic/supabase";
@@ -23,7 +23,7 @@ export default function DatabaseSettingsView() {
   const { showNotification } = useNotifications();
   const [deleteAllDataModalOpened, setDeleteAllDataModalOpened] =
     useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [isRestoringCloud, setIsRestoringCloud] = useState(false);
 
@@ -110,27 +110,16 @@ export default function DatabaseSettingsView() {
             a.click();
           }}
         >
-          Export All
+          Save all in PC
         </Button>
-        <Button
-          style={{ marginLeft: 10 }}
-          leftSection={<IconDatabaseImport />}
-          onClick={async () => {
-            const { seedAllContent } = await import("../../../logic/seedData");
-            await seedAllContent();
-            alert("Study materials synced successfully! The dashboard will now reflect the latest content.");
-            window.location.reload();
-          }}
-        >
-          Sync Latest Course Material
-        </Button>
+
         <Button
           style={{ marginLeft: 10 }}
           leftSection={<IconCloudUpload />}
           onClick={handleManualCloudSync}
           disabled={isSyncingCloud}
         >
-          {isSyncingCloud ? "Syncing..." : "Sync to Supabase Cloud"}
+          {isSyncingCloud ? "Syncing..." : "Sync current full"}
         </Button>
         <Button
           style={{ marginLeft: 10 }}
@@ -139,45 +128,14 @@ export default function DatabaseSettingsView() {
           onClick={handleRestoreFromCloud}
           disabled={isRestoringCloud}
         >
-          {isRestoringCloud ? "Restoring..." : "Restore from Supabase Cloud"}
+          {isRestoringCloud ? "Restoring..." : "Restore from last full"}
         </Button>
         <Section title="Danger Zone" className={`${BASE}__danger-zone`}>
           <p className={`${BASE}__danger-text`}>
             This section contains potentially dangerous settings. Proceed with
             utmost caution!
           </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            className={`${BASE}__file-input`}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                  if (event.target) {
-                    const blob = new Blob([event.target.result as string], {
-                      type: "application/json",
-                    });
-                    try {
-                      await importInto(db, blob, { overwriteValues: true });
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  }
-                };
-                reader.readAsText(file);
-              }
-            }}
-          />
-          <Button
-            leftSection={<IconDatabaseImport />}
-            variant="destructive"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Import Database (overwrites conflicting data, e.g. settings)
-          </Button>
+
           <Button
             leftSection={<IconTrash />}
             variant="destructive"

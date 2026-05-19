@@ -31,8 +31,12 @@
 }
 
 .cloud-settings__btn--primary {
-  background-color: var(--color-primary);
+  background-color: var(--color-primary-600);
   color: white;
+}
+
+.cloud-settings__btn--primary:hover:not(:disabled) {
+  background-color: var(--theme-primary-500);
 }
 
 .cloud-settings__btn--secondary {
