@@ -1,12 +1,7 @@
-import { IconRobot, IconBook, IconMessageCircle, IconHeadphones, IconPresentation, IconFileWord, IconFileDescription, IconCloudDownload } from "@tabler/icons-react";
+import { IconRobot, IconMessageCircle, IconCloudDownload } from "@tabler/icons-react";
 import React, { useState, useEffect } from "react";
-import { open } from '@tauri-apps/plugin-shell';
+import { isTauri } from "@/lib/isTauri";
 import "./NotebookLMView.css";
-
-import { 
-  ckdStudyGuideUrl, ckdBriefingDocUrl, ckdAudioOverviewUrl, ckdSlideDeckUrl,
-  akiStudyGuideUrl, akiBriefingDocUrl, akiAudioOverviewUrl, akiSlideDeckUrl 
-} from "../../logic/notebookLMData";
 
 interface Notebook {
   id: string;
@@ -15,12 +10,11 @@ interface Notebook {
 }
 
 type TabType = "chat" | "materials";
-type TopicType = "CKD" | "AKI";
+
+const ONEDRIVE_BASE = "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review";
 
 export default function NotebookLMView() {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
-  const [selectedTopic, setSelectedTopic] = useState<TopicType>("CKD");
-  
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [selectedNotebook, setSelectedNotebook] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -30,18 +24,55 @@ export default function NotebookLMView() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/notebooks")
-      .then(res => res.json())
-      .then(data => {
+    let mounted = true;
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch("http://localhost:3001/api/notebooks");
+        const data = await res.json();
         if (data.error) throw new Error(data.error);
-        setNotebooks(data.notebooks || []);
-        setIsConnected(true);
-      })
-      .catch(err => {
-        console.error(err);
-        setIsConnected(false);
-        setError("Failed to connect to local MCP proxy. Make sure it is running.");
-      });
+        if (mounted) {
+          setNotebooks(data.notebooks || []);
+          setIsConnected(true);
+        }
+      } catch (err) {
+        console.warn("MCP Proxy disconnected. Attempting to auto-start...", err);
+        try {
+          if (!isTauri()) {
+            throw new Error("Cannot auto-start local proxy from web browser. Please run 'node server/mcpProxy.mjs' locally if using localhost proxy.");
+          }
+          const { Command } = await import("@tauri-apps/plugin-shell");
+          const cmd = Command.create('start-mcp', ['/Users/julio/projects/Renal_Review/skola-main/server/mcpProxy.mjs']);
+          await cmd.spawn();
+          
+          // Wait 3 seconds for it to boot up, then check again
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const res2 = await fetch("http://localhost:3001/api/notebooks");
+              const data2 = await res2.json();
+              if (data2.error) throw new Error(data2.error);
+              setNotebooks(data2.notebooks || []);
+              setIsConnected(true);
+              setError("");
+            } catch (err2) {
+              console.error(err2);
+              setIsConnected(false);
+              setError("Failed to auto-start local MCP proxy.");
+            }
+          }, 3000);
+        } catch (spawnErr) {
+          console.error("Failed to spawn start-mcp command:", spawnErr);
+          if (mounted) {
+            setIsConnected(false);
+            setError("Failed to connect to local MCP proxy and could not auto-start it.");
+          }
+        }
+      }
+    };
+
+    checkStatus();
+    return () => { mounted = false; };
   }, []);
 
   const handleQuery = async () => {
@@ -66,31 +97,64 @@ export default function NotebookLMView() {
     }
   };
 
-  const handleOpenMedia = async (path: string) => {
+  const handleReconnect = async () => {
+    setLoading(true);
+    setError("");
     try {
-      await open(path);
-    } catch (err) {
-      console.error("Failed to open file:", err);
-      setError("Failed to open file. Make sure it has been synced to your OneDrive folder.");
+      const res = await fetch("http://localhost:3001/api/refresh_auth", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setIsConnected(true);
+        const res2 = await fetch("http://localhost:3001/api/notebooks");
+        const data2 = await res2.json();
+        if (data2.error) {
+          throw new Error(data2.error);
+        } else {
+          setNotebooks(data2.notebooks || []);
+        }
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      setError("Failed to reconnect: " + err.message);
+      setIsConnected(false);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSyncLLM = () => {
-    // Placeholder for future sync implementation
-    alert("Checking Notebook LM folder... No new items found to download.");
+  const handleSaveToOneDrive = async () => {
+    if (!response || !selectedNotebook) return;
+    const nb = notebooks.find(n => n.id === selectedNotebook);
+    const nbName = nb?.title || nb?.name || "";
+    
+    let folderPath = ONEDRIVE_BASE;
+    if (nbName.includes("CKD")) folderPath += "/01-CKD";
+    else if (nbName.includes("AKI")) folderPath += "/02-AKI";
+    
+    const ext = ".md";
+    // Creating a readable file name based on the first few words of the prompt
+    const promptSnippet = prompt.trim().split(" ").slice(0, 4).join("_").replace(/[^a-z0-9_]/gi, '').toLowerCase() || "flashcards";
+    const fileName = `llm_${promptSnippet}_${Date.now()}${ext}`;
+
+    try {
+      const res = await fetch("http://localhost:3001/api/save_text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: response, fileName, folderPath })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(`Saved ${fileName} to OneDrive! You can now sync it in Study Materials or Batch Import.`);
+      } else {
+        alert("Failed to save: " + data.error);
+      }
+    } catch (err: any) {
+      alert("Error saving: " + err.message);
+    }
   };
 
-  const materials = selectedTopic === "CKD" ? [
-    { title: "Audio Overview", path: ckdAudioOverviewUrl, icon: <IconHeadphones size={32} />, color: "var(--primary)" },
-    { title: "Study Guide", path: ckdStudyGuideUrl, icon: <IconFileWord size={32} />, color: "#2b579a" },
-    { title: "Briefing Document", path: ckdBriefingDocUrl, icon: <IconFileDescription size={32} />, color: "#2b579a" },
-    { title: "Slide Deck", path: ckdSlideDeckUrl, icon: <IconPresentation size={32} />, color: "#b7472a" },
-  ] : [
-    { title: "Audio Overview", path: akiAudioOverviewUrl, icon: <IconHeadphones size={32} />, color: "var(--primary)" },
-    { title: "Study Guide", path: akiStudyGuideUrl, icon: <IconFileWord size={32} />, color: "#2b579a" },
-    { title: "Briefing Document", path: akiBriefingDocUrl, icon: <IconFileDescription size={32} />, color: "#2b579a" },
-    { title: "Slide Deck", path: akiSlideDeckUrl, icon: <IconPresentation size={32} />, color: "#b7472a" },
-  ];
 
   return (
     <div className="notebooklm-view">
@@ -99,9 +163,26 @@ export default function NotebookLMView() {
           <IconRobot size={32} />
           <h1>NotebookLM Assistant</h1>
           {isConnected !== null && (
-            <div className={`notebooklm-status ${isConnected ? 'connected' : 'disconnected'}`}>
-              <span className="status-dot"></span>
-              {isConnected ? 'Connected' : 'Disconnected'}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div className={`notebooklm-status ${isConnected ? 'connected' : 'disconnected'}`}>
+                <span className="status-dot"></span>
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </div>
+              <button 
+                onClick={handleReconnect}
+                disabled={loading}
+                style={{
+                  padding: "4px 12px",
+                  fontSize: "12px",
+                  background: "var(--theme-primary)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer"
+                }}
+              >
+                {loading ? "Reconnecting..." : "Reconnect"}
+              </button>
             </div>
           )}
         </div>
@@ -113,13 +194,6 @@ export default function NotebookLMView() {
           >
             <IconMessageCircle size={20} />
             Chat
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'materials' ? 'active' : ''}`}
-            onClick={() => setActiveTab('materials')}
-          >
-            <IconBook size={20} />
-            Study Materials
           </button>
         </div>
       </div>
@@ -164,49 +238,22 @@ export default function NotebookLMView() {
             <div className="notebooklm-response">
               <h3>Response</h3>
               <p>{response}</p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button 
+                  onClick={handleSaveToOneDrive}
+                  className="notebooklm-button"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10b981' }}
+                >
+                  <IconCloudDownload size={18} />
+                  Save as Flashcards (.md) to OneDrive
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {activeTab === 'materials' && (
-        <div className="notebooklm-materials-launcher">
-          <div className="materials-launcher-header">
-            <div className="topic-selector">
-              <button 
-                className={`topic-btn ${selectedTopic === 'CKD' ? 'active' : ''}`}
-                onClick={() => setSelectedTopic('CKD')}
-              >
-                Chronic Kidney Disease (CKD)
-              </button>
-              <button 
-                className={`topic-btn ${selectedTopic === 'AKI' ? 'active' : ''}`}
-                onClick={() => setSelectedTopic('AKI')}
-              >
-                Acute Kidney Injury (AKI)
-              </button>
-            </div>
-            <button className="sync-btn" onClick={handleSyncLLM}>
-              <IconCloudDownload size={18} />
-              Sync from LLM
-            </button>
-          </div>
 
-          <div className="materials-grid">
-            {materials.map((mat, i) => (
-              <div key={i} className="material-card" onClick={() => handleOpenMedia(mat.path)}>
-                <div className="material-icon" style={{ color: mat.color }}>
-                  {mat.icon}
-                </div>
-                <div className="material-info">
-                  <h3>{mat.title}</h3>
-                  <p>Open locally from OneDrive</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

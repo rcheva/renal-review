@@ -1,6 +1,9 @@
 import { Kbd } from "@/components/ui/Kbd";
 import { Menu, MenuItem } from "@/components/ui/Menu";
 import { Select, SelectOption } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { TextInput } from "@/components/ui/TextInput";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useListState } from "@/lib/hooks/useListState";
@@ -15,9 +18,13 @@ import {
   IconCalendar,
   IconMenuOrder,
   IconTextCaption,
+  IconChartBar,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/logic/supabase";
+import { convert } from "html-to-text";
 import NotebookCard from "./NotebookCard";
 import "./NotebookView.css";
 
@@ -26,6 +33,7 @@ const NOTEBOOK_LIMIT = 1000;
 
 export default function NotebookView() {
   const [deck] = useDeckFromUrl();
+  const navigate = useNavigate();
 
   const [excludeSubDecks, setExcludeSubDecks] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -40,6 +48,13 @@ export default function NotebookView() {
   const [customOrderTouched, setCustomOrderTouched] = useState(false);
   const [state, handlers] = useListState(sortedNotes ?? []);
 
+  // Polling Selection State
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
+  const [isCompileModalOpen, setIsCompileModalOpen] = useState(false);
+  const [pollTitle, setPollTitle] = useState("");
+  const [isCompiling, setIsCompiling] = useState(false);
+
   useEffect(() => {
     if (useCustomSort && !customOrderTouched) {
       handlers.setState(sortedNotes ?? []);
@@ -53,6 +68,65 @@ export default function NotebookView() {
     );
   }, [notes, sortOption, sortOrder, setSortedNotes]);
 
+  const toggleNoteSelection = (noteId: string) => {
+    const newSelected = new Set(selectedNoteIds);
+    if (newSelected.has(noteId)) {
+      newSelected.delete(noteId);
+    } else {
+      newSelected.add(noteId);
+    }
+    setSelectedNoteIds(newSelected);
+  };
+
+  const handleCompilePoll = async () => {
+    if (!pollTitle.trim() || selectedNoteIds.size === 0) return;
+    setIsCompiling(true);
+
+    const { data: pollData, error: pollError } = await supabase
+      .from("polls")
+      .insert([{ title: pollTitle }])
+      .select()
+      .single();
+
+    if (pollError || !pollData) {
+      console.error("Error creating poll:", pollError);
+      setIsCompiling(false);
+      return;
+    }
+
+    const selectedNotesArray = sortedNotes.filter(n => selectedNoteIds.has(n.id));
+    const allSelectedAnswers = selectedNotesArray.map(n => convert((n.content as any).back || ""));
+
+    const questionsToInsert = selectedNotesArray.map((note) => {
+      const qText = convert((note.content as any).front || "");
+      const correctAns = convert((note.content as any).back || "");
+      
+      // Get 3 random distractors from other answers
+      const distractors = allSelectedAnswers.filter(a => a !== correctAns);
+      const shuffledDistractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 3);
+      
+      const options = [correctAns, ...shuffledDistractors];
+      const finalOptions = options.sort(() => 0.5 - Math.random());
+      const correctIndex = finalOptions.indexOf(correctAns);
+
+      return {
+        poll_id: pollData.id,
+        question_text: qText,
+        options: finalOptions,
+        correct_option_index: correctIndex
+      };
+    });
+
+    const { error: qError } = await supabase.from("questions").insert(questionsToInsert);
+    
+    setIsCompiling(false);
+    if (!qError) {
+      navigate(`/polling/edit/${pollData.id}`);
+    } else {
+      console.error("Error creating questions:", qError);
+    }
+  };
+
   return (
     <div className={BASE}>
       <div className={`${BASE}__toolbar`}>
@@ -62,6 +136,9 @@ export default function NotebookView() {
           setExcludeSubDecks={setExcludeSubDecks}
           showAnswer={showAnswer}
           setShowAnswer={setShowAnswer}
+          selectionMode={selectionMode}
+          setSelectionMode={setSelectionMode}
+          selectedCount={selectedNoteIds.size}
         />
       </div>
       {deck?.notes && deck?.notes?.length > NOTEBOOK_LIMIT && (
@@ -107,6 +184,9 @@ export default function NotebookView() {
                     index={index}
                     useCustomSort={true}
                     showAnswer={showAnswer}
+                    selectionMode={selectionMode}
+                    isSelected={selectedNoteIds.has(card.id)}
+                    onToggleSelect={() => toggleNoteSelection(card.id)}
                   />
                 ))}
                 {provided.placeholder}
@@ -123,10 +203,44 @@ export default function NotebookView() {
               index={index}
               useCustomSort={false}
               showAnswer={showAnswer}
+              selectionMode={selectionMode}
+              isSelected={selectedNoteIds.has(note.id)}
+              onToggleSelect={() => toggleNoteSelection(note.id)}
             />
           ))}
         </div>
       )}
+
+      {selectionMode && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "1rem", backgroundColor: "var(--theme-surface)", borderTop: "1px solid var(--theme-border)", display: "flex", justifyContent: "center", gap: "1rem", zIndex: 100, boxShadow: "0 -4px 12px rgba(0,0,0,0.05)" }}>
+          <Button variant="subtle" onClick={() => { setSelectionMode(false); setSelectedNoteIds(new Set()); }}>
+            Cancel
+          </Button>
+          <Button onClick={() => setIsCompileModalOpen(true)} disabled={selectedNoteIds.size === 0}>
+            Compile to Live Poll ({selectedNoteIds.size})
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        opened={isCompileModalOpen}
+        onClose={() => setIsCompileModalOpen(false)}
+        title="Compile Live Poll"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <TextInput
+            label="Poll Title"
+            placeholder="e.g. End of Chapter Review"
+            value={pollTitle}
+            onChange={(e) => setPollTitle(e.target.value)}
+            autoFocus
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <Button variant="subtle" onClick={() => setIsCompileModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleCompilePoll} disabled={!pollTitle.trim() || isCompiling}>Compile</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -191,11 +305,17 @@ function NotebookMenu({
   setExcludeSubDecks,
   showAnswer,
   setShowAnswer,
+  selectionMode,
+  setSelectionMode,
+  selectedCount,
 }: {
   excludeSubDecks: boolean;
   setExcludeSubDecks: (value: boolean) => void;
   showAnswer: boolean;
   setShowAnswer: (value: boolean) => void;
+  selectionMode: boolean;
+  setSelectionMode: (value: boolean) => void;
+  selectedCount: number;
 }) {
   const [t] = useTranslation();
 
@@ -227,6 +347,16 @@ function NotebookMenu({
           {t("notebook.options.show-answer")}
         </MenuItem>
       </Tooltip>
+      <MenuItem
+        onClick={() => {
+          setSelectionMode(!selectionMode);
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <IconChartBar size={16} />
+          {selectionMode ? "Cancel Poll Selection" : "Create Live Poll"}
+        </div>
+      </MenuItem>
     </Menu>
   );
 }

@@ -1,9 +1,6 @@
 import { db } from "./db";
 import { newDeck } from "./deck/newDeck";
 import { BasicNoteTypeAdapter } from "./type-implementations/normal/BasicNote";
-import { ckdAudioOverviewUrl, ckdBriefingDocUrl, ckdSlideDeckUrl, ckdStudyGuideUrl, akiAudioOverviewUrl, akiBriefingDocUrl, akiSlideDeckUrl, akiStudyGuideUrl } from "./notebookLMData";
-import { v4 as uuidv4 } from "uuid";
-
 const topics = [
   "CKD",
   "AKI",
@@ -73,120 +70,11 @@ export async function seedAllContent() {
 
   const ckdDeck = getTopicDeck("CKD");
 
-  // Inject NotebookLM Study Materials into CKD Deck
-  if (ckdDeck) {
-    const existingMaterials = ckdDeck.studyMaterials || [];
-    const materialsToInject = [
-      {
-        id: uuidv4(),
-        type: "audio" as const,
-        title: "2024 KDIGO Guidelines Audio Overview",
-        url: ckdAudioOverviewUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "ppt" as const,
-        title: "KDIGO 2024 CKD Playbook",
-        url: ckdSlideDeckUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "doc" as const,
-        title: "KDIGO 2024 Briefing Document",
-        url: ckdBriefingDocUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "doc" as const,
-        title: "Comprehensive CKD Study Guide",
-        url: ckdStudyGuideUrl,
-        createdAt: new Date(),
-      }
-    ];
-
-    const updatedMaterials = [...existingMaterials];
-    let hasChanges = false;
-    for (const mat of materialsToInject) {
-      const idx = updatedMaterials.findIndex((ex) => ex.title === mat.title);
-      if (idx >= 0) {
-        if (updatedMaterials[idx].url !== mat.url) {
-          updatedMaterials[idx] = { ...updatedMaterials[idx], ...mat, id: updatedMaterials[idx].id };
-          hasChanges = true;
-        }
-      } else {
-        updatedMaterials.push(mat);
-        hasChanges = true;
-      }
-    }
-
-    if (hasChanges) {
-      await db.decks.update(ckdDeck.id, { 
-        studyMaterials: updatedMaterials 
-      });
-    }
-  }
-  const akiDeck = getTopicDeck("AKI");
-
-  if (akiDeck) {
-    const existingMaterials = akiDeck.studyMaterials || [];
-    const materialsToInject = [
-      {
-        id: uuidv4(),
-        type: "audio" as const,
-        title: "AKI and Critical Care Nephrology Audio Overview",
-        url: akiAudioOverviewUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "ppt" as const,
-        title: "AKI 2024 Playbook",
-        url: akiSlideDeckUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "doc" as const,
-        title: "AKI 2024 Briefing Document",
-        url: akiBriefingDocUrl,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        type: "doc" as const,
-        title: "Comprehensive AKI Study Guide",
-        url: akiStudyGuideUrl,
-        createdAt: new Date(),
-      }
-    ];
-
-    const validMaterials = materialsToInject.filter(m => {
-      if ((m.type === 'audio' || m.type === 'ppt') && !m.url) return false;
-      return true;
-    });
-
-    const updatedMaterials = [...existingMaterials];
-    let hasChanges = false;
-    for (const mat of validMaterials) {
-      const idx = updatedMaterials.findIndex((ex) => ex.title === mat.title);
-      if (idx >= 0) {
-        if (updatedMaterials[idx].url !== mat.url) {
-          updatedMaterials[idx] = { ...updatedMaterials[idx], ...mat, id: updatedMaterials[idx].id };
-          hasChanges = true;
-        }
-      } else {
-        updatedMaterials.push(mat);
-        hasChanges = true;
-      }
-    }
-
-    if (hasChanges) {
-      await db.decks.update(akiDeck.id, { 
-        studyMaterials: updatedMaterials 
-      });
+  // Force clear the study materials to eliminate the old Google links and broken files.
+  // The user will use the "Sync OneDrive Files" button to sync exactly what is in their folder.
+  for (const d of allDecks) {
+    if (d.studyMaterials && d.studyMaterials.length > 0) {
+      await db.decks.update(d.id, { studyMaterials: [] });
     }
   }
 
@@ -203,6 +91,7 @@ export async function seedAllContent() {
     }
   }
 
+  const akiDeck = getTopicDeck("AKI");
   if (akiDeck && !allDecks.some((d) => d.name === "AKI Fundamentals")) {
     const subDeckId = await newDeck("AKI Fundamentals", akiDeck);
     const subDeck = await db.decks.get(subDeckId);

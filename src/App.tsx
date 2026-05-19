@@ -5,6 +5,7 @@ import "./style/shell.css";
 import { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";
 import { Outlet, useLocation } from "react-router-dom";
+
 import WelcomeView from "./app/WelcomeView";
 import LoginView from "./app/auth/LoginView";
 import { useAuthSession } from "./app/auth/useAuthSession";
@@ -24,6 +25,7 @@ import { useLocalStorage } from "./lib/hooks/useLocalStorage";
 import { useMediaQuery } from "./lib/hooks/useMediaQuery";
 import { useDeckStatsCacheInit } from "./logic/deck/hooks/useDeckStatsCacheInit";
 import { useSetting } from "./logic/settings/hooks/useSetting";
+import { setSetting } from "./logic/settings/setSetting";
 import { SyncManagerProvider } from "./logic/sync/SyncManager";
 
 const BASE = "app-shell";
@@ -46,6 +48,16 @@ function AppContent() {
   const [sidebarMenuOpened, sidebarHandlers] = useDisclosure(false);
 
   const [registered] = useLocalStorage("registered", false);
+  const [hasWipedDb, setHasWipedDb] = useLocalStorage("hasWipedOldDb_v4", false);
+
+  useEffect(() => {
+    // Force auto-sync off for now per user request
+    setSetting("#cloud_autoSyncEnabled", false);
+    
+    if (!hasWipedDb) {
+      setHasWipedDb(true);
+    }
+  }, [hasWipedDb]);
 
   const routeIsLearn = useLocation().pathname.startsWith("/learn");
   const isXsOrSmaller = useMediaQuery(`(max-width: ${breakpoints.xs}px)`);

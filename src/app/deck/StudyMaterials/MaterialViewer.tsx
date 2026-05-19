@@ -2,7 +2,7 @@ import { Button, Modal, Paper } from "@/components/ui";
 import { StudyMaterial } from "@/logic/deck/deck";
 import { IconExternalLink, IconPlayerPlay } from "@tabler/icons-react";
 import { useNotifications } from "@/components/Notification";
-import { open as openShell } from "@tauri-apps/plugin-shell";
+import { isTauri } from "@/lib/isTauri";
 
 interface MaterialViewerProps {
   material: StudyMaterial | null;
@@ -19,6 +19,10 @@ export default function MaterialViewer({ material, onClose }: MaterialViewerProp
   const handleLaunchDocument = async () => {
     if (!material.url) return;
     try {
+      if (!isTauri()) {
+         throw new Error("Tauri not available");
+      }
+      const { open: openShell } = await import("@tauri-apps/plugin-shell");
       // Attempt to use native Tauri shell to open the file
       await openShell(material.url);
       showNotification({ title: "Launched", message: "Opening document...", type: "info" });
@@ -62,13 +66,20 @@ export default function MaterialViewer({ material, onClose }: MaterialViewerProp
                 (This will open the file in your default Mac application. If you are not using the Desktop app, it will copy the path instead.)
               </p>
             </div>
-          ) : material.type === "video" || material.type === "audio" ? (
-            <iframe
+          ) : material.type === "video" ? (
+            <video
               src={material.url}
-              style={{ width: "100%", height: "100%", border: "none" }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+              controls
+              style={{ width: "100%", height: "100%", border: "none", backgroundColor: "black" }}
             />
+          ) : material.type === "audio" ? (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", padding: "var(--spacing-xl)" }}>
+              <audio
+                src={material.url}
+                controls
+                style={{ width: "80%" }}
+              />
+            </div>
           ) : material.type === "ppt" || material.type === "doc" || material.type === "resume" ? (
             material.url ? (
                <iframe

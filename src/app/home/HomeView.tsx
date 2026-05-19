@@ -5,13 +5,12 @@ import { useDocumentTitle } from "@/lib/hooks/useDocumentTitle";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
-import { IconFolder, IconPlus, IconSearch, IconDatabaseImport } from "@tabler/icons-react";
+import { IconFolder, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import DeckModal from "../deck/DeckModal";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { useNavigate, Link } from "react-router-dom";
-import { seedAllContent } from "@/logic/seedData";
 import "./HomeView.css";
 
 const BASE = "home-view";
@@ -104,22 +103,13 @@ export default function HomeView() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
           <h2 className={`${BASE}__section-title`} style={{ marginBottom: 0 }}>Renal Topics</h2>
-          <Button
-            onClick={async () => {
-              await seedAllContent();
-            }}
-            leftSection={<IconDatabaseImport size={16} />}
-            variant="default"
-          >
-            Seed Demo Content
-          </Button>
         </div>
 
         {isReady && topicDecks.length === 0 ? (
           <div className={`${BASE}__empty-state`}>
             <EmptyNotice
               icon={IconFolder}
-              description="No Renal Topics found. Click 'Seed Demo Content' to auto-generate the decks."
+              description="No Renal Topics found. Create a new deck to get started."
             />
           </div>
         ) : (

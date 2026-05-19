@@ -76,17 +76,22 @@ export default function StudyMaterialsView({ deck }: StudyMaterialsViewProps) {
               onClick={() => setSelectedMaterial(material)}
             >
               {getIconForType(material.type)}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <Text weight="medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {material.title}
                 </Text>
-                <Text size="sm" variant="dimmed" style={{ textTransform: "capitalize" }}>
+                <Text size="xs" variant="dimmed" style={{ textTransform: "capitalize", marginTop: "2px" }}>
                   {material.type}
                 </Text>
               </div>
-              <Button variant="ghost" color="danger" onClick={(e) => handleDelete(e, material.id)} style={{ padding: "4px" }}>
-                <IconTrash size={16} color="var(--theme-danger-500)" />
-              </Button>
+              <div 
+                onClick={(e) => handleDelete(e, material.id)} 
+                style={{ padding: "8px", borderRadius: "4px", background: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onMouseOver={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)")}
+                onMouseOut={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)")}
+              >
+                <IconTrash size={18} color="#ef4444" />
+              </div>
             </Paper>
           ))}
         </div>

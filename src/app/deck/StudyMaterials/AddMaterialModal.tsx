@@ -3,7 +3,7 @@ import { db } from "@/logic/db";
 import { Deck, MaterialType, StudyMaterial } from "@/logic/deck/deck";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { isTauri } from "@/lib/isTauri";
 
 interface AddMaterialModalProps {
   deck: Deck;
@@ -54,6 +54,11 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
 
   const handleBrowseFile = async () => {
     try {
+      if (!isTauri()) {
+        alert("Selecting local files is only available in the Mac Desktop app.");
+        return;
+      }
+      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
       const selectedPath = await openDialog({
         multiple: false,
         directory: false,

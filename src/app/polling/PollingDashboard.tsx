@@ -22,13 +22,13 @@ export default function PollingDashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from("polls")
-      .select("*")
+      .select("*, questions(count)")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching polls:", error);
     } else {
-      setPolls(data as Poll[]);
+      setPolls(data as any[]);
     }
     setLoading(false);
   };
@@ -95,6 +95,7 @@ export default function PollingDashboard() {
                   <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
                     <span>Status: <strong style={{ color: poll.status === "active" ? "var(--theme-green-600)" : "inherit" }}>{poll.status.toUpperCase()}</strong></span>
                     <span>Created: {new Date(poll.created_at).toLocaleDateString()}</span>
+                    <span>Questions: {(poll as any).questions?.[0]?.count || 0}</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>

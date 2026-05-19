@@ -5,7 +5,7 @@ import { getAdapter } from "@/logic/NoteTypeAdapter";
 import { NoteType } from "@/logic/note/note";
 import { Note } from "@/logic/note/note";
 import { Draggable } from "@hello-pangea/dnd";
-import { IconDots } from "@tabler/icons-react";
+import { IconDots, IconCircleCheckFilled, IconCircle } from "@tabler/icons-react";
 import { memo, useState } from "react";
 import NoteMenu from "../editor/NoteMenu";
 
@@ -14,6 +14,9 @@ interface NotebookCardProps {
   note: Note<NoteType>;
   useCustomSort: boolean;
   showAnswer: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 function NotebookCard({
@@ -21,6 +24,9 @@ function NotebookCard({
   index,
   useCustomSort,
   showAnswer,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: NotebookCardProps) {
   return useCustomSort ? (
     <Draggable key={note.id} index={index} draggableId={note.id}>
@@ -33,36 +39,43 @@ function NotebookCard({
             snapshot.isDragging ? "notebook__card-wrapper--dragging" : ""
           }`}
         >
-          <InnerCard note={note} showAnswer={showAnswer} />
+          <InnerCard note={note} showAnswer={showAnswer} selectionMode={selectionMode} isSelected={isSelected} onToggleSelect={onToggleSelect} />
         </div>
       )}
     </Draggable>
   ) : (
     <div className="notebook__card-wrapper">
-      <InnerCard note={note} showAnswer={showAnswer} />
+      <InnerCard note={note} showAnswer={showAnswer} selectionMode={selectionMode} isSelected={isSelected} onToggleSelect={onToggleSelect} />
     </div>
   );
 }
 export default memo(NotebookCard);
 
 const InnerCard = memo(
-  ({ note, showAnswer }: { note: Note<NoteType>; showAnswer: boolean }) => {
+  ({ note, showAnswer, selectionMode, isSelected, onToggleSelect }: { note: Note<NoteType>; showAnswer: boolean; selectionMode?: boolean; isSelected?: boolean; onToggleSelect?: () => void }) => {
     const [answerToggled, handlers] = useDisclosure(false);
     const [hasHovered, setHasHovered] = useState(false);
 
     return (
       <Paper
-        onClick={handlers.toggle}
+        onClick={selectionMode ? onToggleSelect : handlers.toggle}
         withBorder
         style={{
           position: "relative",
           padding: 0,
           cursor: "pointer",
+          borderColor: isSelected ? "var(--theme-primary)" : undefined,
+          borderWidth: isSelected ? 2 : 1,
         }}
       >
         {getAdapter(note).displayNote(
           note,
           showAnswer ? "strict" : answerToggled ? "optional" : "none"
+        )}
+        {selectionMode && (
+          <div style={{ position: "absolute", top: "var(--spacing-sm)", left: "var(--spacing-sm)", color: isSelected ? "var(--theme-primary)" : "var(--theme-neutral-300)" }}>
+            {isSelected ? <IconCircleCheckFilled /> : <IconCircle />}
+          </div>
         )}
         <div
           style={{

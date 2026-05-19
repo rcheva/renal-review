@@ -10,7 +10,6 @@ import {
   IconRobot,
   IconSettings,
   IconX,
-  IconFileImport,
 } from "@tabler/icons-react";
 import { t } from "i18next";
 import { useLocation } from "react-router-dom";
@@ -102,13 +101,7 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
             />
-            <NavItem
-              label={"Batch Import"}
-              path="/import"
-              icon={<IconFileImport />}
-              collapsed={minimalMode}
-              onClick={fullscreenMode ? menuHandlers.close : undefined}
-            />
+
             <NavItem
               label={"Live Polling"}
               path="/polling"

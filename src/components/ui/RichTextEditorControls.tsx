@@ -251,13 +251,13 @@ export const MediaUploadControl = memo(function MediaUploadControl({
       const filePath = `${sessionData.session.user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('skola-media')
+        .from('renal-review')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('skola-media')
+        .from('renal-review')
         .getPublicUrl(filePath);
 
       if (file.type.startsWith('image/')) {

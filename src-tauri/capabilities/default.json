@@ -6,6 +6,28 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "shell:allow-open",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/**/*",
+        "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/*"
+      ]
+    },
+    "fs:allow-read-dir",
+    "fs:allow-exists",
+    "fs:allow-read-text-file",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "start-mcp",
+          "cmd": "/usr/local/bin/node",
+          "sidecar": false,
+          "args": ["/Users/julio/projects/Renal_Review/skola-main/server/mcpProxy.mjs"]
+        }
+      ]
+    }
   ]
 }
