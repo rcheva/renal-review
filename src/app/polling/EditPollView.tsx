@@ -154,25 +154,35 @@ Here are the flashcards:\n\n`;
     try {
       let textToParse = aiJsonText.trim();
       // basic cleanup in case AI includes markdown code blocks
-      if (textToParse.startsWith("\`\`\`json")) textToParse = textToParse.replace(/\`\`\`json/g, "");
-      if (textToParse.startsWith("\`\`\`")) textToParse = textToParse.replace(/\`\`\`/g, "");
-      if (textToParse.endsWith("\`\`\`")) textToParse = textToParse.slice(0, -3);
+      if (textToParse.startsWith("```json")) textToParse = textToParse.replace(/```json/g, "");
+      if (textToParse.startsWith("```")) textToParse = textToParse.replace(/```/g, "");
+      if (textToParse.endsWith("```")) textToParse = textToParse.slice(0, -3);
 
       const parsed = JSON.parse(textToParse);
       if (!Array.isArray(parsed)) throw new Error("JSON must be an array.");
       
       const questionsToInsert = parsed.map(p => {
-        if (!p.question_text || !Array.isArray(p.options) || p.correct_option_index === undefined) {
+        let qText = p.question_text || p.question;
+        let opts = p.options;
+        let correctIdx = p.correct_option_index;
+        
+        // Support alternative format: question, correct_answer, incorrect_answers
+        if (!opts && p.correct_answer && Array.isArray(p.incorrect_answers)) {
+          opts = [p.correct_answer, ...p.incorrect_answers];
+          correctIdx = 0;
+        }
+
+        if (!qText || !Array.isArray(opts) || correctIdx === undefined) {
           throw new Error("Invalid question format in JSON.");
         }
         
-        const originalCorrectAnswer = p.options[p.correct_option_index];
-        const shuffledOptions = [...p.options].sort(() => 0.5 - Math.random());
+        const originalCorrectAnswer = opts[correctIdx];
+        const shuffledOptions = [...opts].sort(() => 0.5 - Math.random());
         const newCorrectIndex = shuffledOptions.indexOf(originalCorrectAnswer);
 
         return {
           poll_id: pollId,
-          question_text: p.question_text,
+          question_text: qText,
           options: shuffledOptions,
           correct_option_index: newCorrectIndex,
           explanation: p.explanation || null

@@ -1,5 +1,5 @@
 import type ModalProps from "@/components/ModalProps";
-import { Button, Modal, TextInput } from "@/components/ui";
+import { Button, Modal, TextInput, Select } from "@/components/ui";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import type { Deck } from "@/logic/deck/deck";
 import { newDeck } from "@/logic/deck/newDeck";
@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import "./DeckModal.css";
 import { ColorIdentifier } from "@/lib/ColorIdentifier";
 import DeckColorChooser from "./DeckColorChooser";
+import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 
 const BASE = "deck-modal";
 
@@ -27,10 +28,12 @@ function DeckModal({
   superDeck,
 }: DeckModalProps) {
   const navigate = useNavigate();
+  const [decks] = useAllDecks();
 
   const [nameValue, setNameValue] = useState<string>("");
   const [descriptionValue, setDescriptionValue] = useState<string>("");
   const [deckColor, setDeckColor] = useState<ColorIdentifier>("sky");
+  const [selectedParentId, setSelectedParentId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -43,8 +46,9 @@ function DeckModal({
       setNameValue("");
       setDescriptionValue("");
       setDeckColor("sky");
+      setSelectedParentId(superDeck?.id || "");
     }
-  }, [mode, deck, opened]);
+  }, [mode, deck, superDeck, opened]);
 
   function isInputValid(): boolean {
     return nameValue.trim() !== "";
@@ -62,9 +66,10 @@ function DeckModal({
 
     try {
       if (mode === "create") {
+        const parent = decks?.find(d => d.id === selectedParentId) || superDeck;
         const id = await newDeck(
           nameValue,
-          superDeck,
+          parent,
           descriptionValue,
           deckColor
         );
@@ -120,6 +125,19 @@ function DeckModal({
           onChange={(e) => setDescriptionValue(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
         />
+        
+        {mode === "create" && (
+          <Select
+            label="Parent Deck (Optional)"
+            value={selectedParentId}
+            onChange={(val) => setSelectedParentId(val || "")}
+            options={[
+              { label: "None (Top Level)", value: "" },
+              ...(decks || []).map(d => ({ label: d.name, value: d.id }))
+            ]}
+          />
+        )}
+
         <DeckColorChooser deckColor={deckColor} setDeckColor={setDeckColor} />
         {status && <p className={`${BASE}__status`}>{status}</p>}
         <div className={`${BASE}__actions`}>

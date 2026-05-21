@@ -18,12 +18,28 @@ export default function StudentPollView() {
   const [hospital, setHospital] = useState("MRHT");
   const [hasStarted, setHasStarted] = useState(false);
   const [studentResponses, setStudentResponses] = useState<Record<string, number>>({});
+  const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
 
   useEffect(() => {
     if (pollId) {
       fetchData();
     }
   }, [pollId]);
+
+  useEffect(() => {
+    if (questions.length > 0 && currentQuestionIndex < questions.length) {
+      const q = questions[currentQuestionIndex];
+      if (q && q.options) {
+        const indices = q.options.map((_, i) => i);
+        // Fisher-Yates shuffle
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        setShuffledIndices(indices);
+      }
+    }
+  }, [currentQuestionIndex, questions]);
 
   const fetchData = async () => {
     const { data: pollData, error: pollError } = await supabase.from("polls").select("*").eq("id", pollId).single();
@@ -37,16 +53,16 @@ export default function StudentPollView() {
     if (questionData) setQuestions(questionData as Question[]);
   };
 
-  const handleOptionClick = async (index: number) => {
+  const handleOptionClick = async (originalIndex: number) => {
     if (hasSubmitted) return;
     setHasSubmitted(true);
 
     const q = questions[currentQuestionIndex];
-    setStudentResponses(prev => ({ ...prev, [q.id]: index }));
+    setStudentResponses(prev => ({ ...prev, [q.id]: originalIndex }));
     
     await supabase.from("responses").insert([{
       question_id: q.id,
-      selected_option_index: index,
+      selected_option_index: originalIndex,
       respondent_name: studentName.trim() || null,
       hospital: hospital.trim() || null
     }]);
@@ -270,40 +286,43 @@ export default function StudentPollView() {
         <div style={{ fontSize: "1.5rem", marginBottom: "2rem", lineHeight: 1.4, fontWeight: "bold" }}>{parse(q.question_text)}</div>
         
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {q.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => handleOptionClick(i)}
-              style={{
-                padding: "1rem 1.5rem",
-                borderRadius: "8px",
-                border: "2px solid var(--theme-neutral-200)",
-                backgroundColor: "white",
-                color: "var(--theme-neutral-900)",
-                cursor: hasSubmitted ? "default" : "pointer",
-                textAlign: "left",
-                fontSize: "1.125rem",
-                transition: "all 0.2s ease"
-              }}
-              disabled={hasSubmitted}
-              onMouseEnter={(e) => {
-                if (!hasSubmitted) {
-                  e.currentTarget.style.borderColor = "var(--theme-blue-400)";
-                  e.currentTarget.style.backgroundColor = "var(--theme-blue-50)";
-                  e.currentTarget.style.color = "var(--theme-blue-900)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!hasSubmitted) {
-                  e.currentTarget.style.borderColor = "var(--theme-neutral-200)";
-                  e.currentTarget.style.backgroundColor = "white";
-                  e.currentTarget.style.color = "var(--theme-neutral-900)";
-                }
-              }}
-            >
-              {opt}
-            </button>
-          ))}
+          {shuffledIndices.map((originalIndex) => {
+            const opt = q.options[originalIndex];
+            return (
+              <button
+                key={originalIndex}
+                onClick={() => handleOptionClick(originalIndex)}
+                style={{
+                  padding: "1rem 1.5rem",
+                  borderRadius: "8px",
+                  border: "2px solid var(--theme-neutral-200)",
+                  backgroundColor: "white",
+                  color: "var(--theme-neutral-900)",
+                  cursor: hasSubmitted ? "default" : "pointer",
+                  textAlign: "left",
+                  fontSize: "1.125rem",
+                  transition: "all 0.2s ease"
+                }}
+                disabled={hasSubmitted}
+                onMouseEnter={(e) => {
+                  if (!hasSubmitted) {
+                    e.currentTarget.style.borderColor = "var(--theme-blue-400)";
+                    e.currentTarget.style.backgroundColor = "var(--theme-blue-50)";
+                    e.currentTarget.style.color = "var(--theme-blue-900)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!hasSubmitted) {
+                    e.currentTarget.style.borderColor = "var(--theme-neutral-200)";
+                    e.currentTarget.style.backgroundColor = "white";
+                    e.currentTarget.style.color = "var(--theme-neutral-900)";
+                  }
+                }}
+              >
+                {opt}
+              </button>
+            );
+          })}
         </div>
 
         <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
