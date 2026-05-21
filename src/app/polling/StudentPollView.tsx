@@ -478,6 +478,28 @@ export default function StudentPollView() {
         padding: "1rem",
       }}
     >
+      <style>{`
+        .poll-option-button {
+          padding: 1rem 1.5rem;
+          border-radius: 8px;
+          border: 2px solid var(--theme-neutral-200);
+          background-color: var(--theme-card-bg);
+          color: var(--theme-neutral-900);
+          text-align: left;
+          font-size: 1.125rem;
+          transition: all 0.2s ease;
+          width: 100%;
+          cursor: pointer;
+        }
+        .poll-option-button:hover:not(:disabled) {
+          border-color: var(--theme-blue-400);
+          background-color: var(--theme-blue-50);
+          color: var(--theme-blue-900);
+        }
+        .poll-option-button:disabled {
+          cursor: default;
+        }
+      `}</style>
       <Paper
         withBorder
         style={{
@@ -517,35 +539,8 @@ export default function StudentPollView() {
               <button
                 key={originalIndex}
                 onClick={() => handleOptionClick(originalIndex)}
-                style={{
-                  padding: "1rem 1.5rem",
-                  borderRadius: "8px",
-                  border: "2px solid var(--theme-neutral-200)",
-                  backgroundColor: "var(--theme-card-bg)",
-                  color: "var(--theme-neutral-900)",
-                  cursor: hasSubmitted ? "default" : "pointer",
-                  textAlign: "left",
-                  fontSize: "1.125rem",
-                  transition: "all 0.2s ease",
-                }}
+                className="poll-option-button"
                 disabled={hasSubmitted}
-                onMouseEnter={(e) => {
-                  if (!hasSubmitted) {
-                    e.currentTarget.style.borderColor = "var(--theme-blue-400)";
-                    e.currentTarget.style.backgroundColor =
-                      "var(--theme-blue-50)";
-                    e.currentTarget.style.color = "var(--theme-blue-900)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!hasSubmitted) {
-                    e.currentTarget.style.borderColor =
-                      "var(--theme-neutral-200)";
-                    e.currentTarget.style.backgroundColor =
-                      "var(--theme-card-bg)";
-                    e.currentTarget.style.color = "var(--theme-neutral-900)";
-                  }
-                }}
               >
                 {opt}
               </button>
