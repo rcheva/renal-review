@@ -491,16 +491,19 @@ export default function StudentPollView() {
           width: 100%;
           cursor: pointer;
         }
-        .poll-option-button:hover:not(:disabled) {
-          border-color: var(--theme-blue-400);
-          background-color: var(--theme-blue-50);
-          color: var(--theme-blue-900);
+        @media (hover: hover) {
+          .poll-option-button:hover:not(:disabled) {
+            border-color: var(--theme-blue-400);
+            background-color: var(--theme-blue-50);
+            color: var(--theme-blue-900);
+          }
         }
         .poll-option-button:disabled {
           cursor: default;
         }
       `}</style>
       <Paper
+        key={q.id}
         withBorder
         style={{
           width: "100%",
@@ -537,7 +540,7 @@ export default function StudentPollView() {
             const opt = q.options[originalIndex];
             return (
               <button
-                key={originalIndex}
+                key={`${q.id}-${originalIndex}`}
                 onClick={() => handleOptionClick(originalIndex)}
                 className="poll-option-button"
                 disabled={hasSubmitted}
