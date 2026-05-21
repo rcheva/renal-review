@@ -169,6 +169,20 @@
   --theme-lime-800: var(--color-lime-800);
   --theme-lime-900: var(--color-lime-900);
   --theme-lime-950: var(--color-lime-950);
+
+  --theme-card-bg: #ffffff;
+
+  --theme-blue-50: var(--color-sky-50);
+  --theme-blue-100: var(--color-sky-100);
+  --theme-blue-200: var(--color-sky-200);
+  --theme-blue-300: var(--color-sky-300);
+  --theme-blue-400: var(--color-sky-400);
+  --theme-blue-500: var(--color-sky-500);
+  --theme-blue-600: var(--color-sky-600);
+  --theme-blue-700: var(--color-sky-700);
+  --theme-blue-800: var(--color-sky-800);
+  --theme-blue-900: var(--color-sky-900);
+  --theme-blue-950: var(--color-sky-950);
 }
 
 [data-theme="dark"] {
@@ -255,4 +269,18 @@
   --theme-lime-800: var(--color-lime-200);
   --theme-lime-900: var(--color-lime-100);
   --theme-lime-950: var(--color-lime-50);
+
+  --theme-card-bg: var(--color-neutral-900);
+
+  --theme-blue-50: var(--color-sky-950);
+  --theme-blue-100: var(--color-sky-900);
+  --theme-blue-200: var(--color-sky-800);
+  --theme-blue-300: var(--color-sky-700);
+  --theme-blue-400: var(--color-sky-600);
+  --theme-blue-500: var(--color-sky-500);
+  --theme-blue-600: var(--color-sky-400);
+  --theme-blue-700: var(--color-sky-300);
+  --theme-blue-800: var(--color-sky-200);
+  --theme-blue-900: var(--color-sky-100);
+  --theme-blue-950: var(--color-sky-50);
 }

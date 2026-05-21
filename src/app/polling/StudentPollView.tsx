@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/logic/supabase";
-import { Poll, Question } from "./types";
 import { Button, Paper, TextInput } from "@/components/ui";
-import { useParams } from "react-router-dom";
+import { supabase } from "@/logic/supabase";
 import { IconCheck, IconDownload } from "@tabler/icons-react";
 import parse from "html-react-parser";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Poll, Question } from "./types";
 
 export default function StudentPollView() {
   const { pollId } = useParams();
@@ -13,11 +13,13 @@ export default function StudentPollView() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState("");
-  
+
   const [studentName, setStudentName] = useState("");
   const [hospital, setHospital] = useState("MRHT");
   const [hasStarted, setHasStarted] = useState(false);
-  const [studentResponses, setStudentResponses] = useState<Record<string, number>>({});
+  const [studentResponses, setStudentResponses] = useState<
+    Record<string, number>
+  >({});
   const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
 
   useEffect(() => {
@@ -42,14 +44,22 @@ export default function StudentPollView() {
   }, [currentQuestionIndex, questions]);
 
   const fetchData = async () => {
-    const { data: pollData, error: pollError } = await supabase.from("polls").select("*").eq("id", pollId).single();
+    const { data: pollData, error: pollError } = await supabase
+      .from("polls")
+      .select("*")
+      .eq("id", pollId)
+      .single();
     if (pollError || !pollData) {
       setError("Poll not found.");
       return;
     }
     setPoll(pollData as Poll);
 
-    const { data: questionData } = await supabase.from("questions").select("*").eq("poll_id", pollId).order("created_at", { ascending: true });
+    const { data: questionData } = await supabase
+      .from("questions")
+      .select("*")
+      .eq("poll_id", pollId)
+      .order("created_at", { ascending: true });
     if (questionData) setQuestions(questionData as Question[]);
   };
 
@@ -58,16 +68,18 @@ export default function StudentPollView() {
     setHasSubmitted(true);
 
     const q = questions[currentQuestionIndex];
-    setStudentResponses(prev => ({ ...prev, [q.id]: originalIndex }));
-    
-    await supabase.from("responses").insert([{
-      question_id: q.id,
-      selected_option_index: originalIndex,
-      respondent_name: studentName.trim() || null,
-      hospital: hospital.trim() || null
-    }]);
+    setStudentResponses((prev) => ({ ...prev, [q.id]: originalIndex }));
 
-    setCurrentQuestionIndex(prev => prev + 1);
+    await supabase.from("responses").insert([
+      {
+        question_id: q.id,
+        selected_option_index: originalIndex,
+        respondent_name: studentName.trim() || null,
+        hospital: hospital.trim() || null,
+      },
+    ]);
+
+    setCurrentQuestionIndex((prev) => prev + 1);
     setHasSubmitted(false);
   };
 
@@ -93,36 +105,45 @@ export default function StudentPollView() {
 </head>
 <body>
   <h1>Answer Key: ${poll.title}</h1>
-  ${questions.map((q, i) => `
+  ${questions
+    .map(
+      (q, i) => `
     <div class="question">
       <h3>${i + 1}. ${q.question_text}</h3>
       <ul>
-        ${q.options.map((opt, optIndex) => {
-          if (optIndex === q.correct_option_index) {
-            return `<li class="correct">✓ ${opt}</li>`;
-          }
-          return `<li>${opt}</li>`;
-        }).join('')}
+        ${q.options
+          .map((opt, optIndex) => {
+            if (optIndex === q.correct_option_index) {
+              return `<li class="correct">✓ ${opt}</li>`;
+            }
+            return `<li>${opt}</li>`;
+          })
+          .join("")}
       </ul>
-      ${q.explanation ? `<div class="explanation"><strong>Explanation:</strong> ${q.explanation}</div>` : ''}
+      ${q.explanation ? `<div class="explanation"><strong>Explanation:</strong> ${q.explanation}</div>` : ""}
     </div>
-  `).join('')}
+  `
+    )
+    .join("")}
 </body>
 </html>
     `;
 
     try {
-      const isTauri = window.location.origin.includes('tauri://') || window.location.origin.includes('file://') || (window as any).__TAURI_INTERNALS__;
-      
+      const isTauri =
+        window.location.origin.includes("tauri://") ||
+        window.location.origin.includes("file://") ||
+        (window as any).__TAURI_INTERNALS__;
+
       if (isTauri) {
-        const { save } = await import('@tauri-apps/plugin-dialog');
-        const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-        
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+
         const filePath = await save({
-          filters: [{ name: 'HTML Document', extensions: ['html'] }],
-          defaultPath: `${poll.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_answer_key.html`
+          filters: [{ name: "HTML Document", extensions: ["html"] }],
+          defaultPath: `${poll.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_answer_key.html`,
         });
-        
+
         if (filePath) {
           await writeTextFile(filePath, htmlContent);
         }
@@ -131,22 +152,35 @@ export default function StudentPollView() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${poll.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_answer_key.html`;
+        a.download = `${poll.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_answer_key.html`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Error saving file:', err);
-      alert('Failed to save file. If you are on desktop, ensure you have permission to write to that directory.');
+      console.error("Error saving file:", err);
+      alert(
+        "Failed to save file. If you are on desktop, ensure you have permission to write to that directory."
+      );
     }
   };
 
   if (error) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "var(--theme-neutral-50)" }}>
-        <Paper withBorder style={{ padding: "2rem", textAlign: "center", maxWidth: 400 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          backgroundColor: "var(--theme-neutral-50)",
+        }}
+      >
+        <Paper
+          withBorder
+          style={{ padding: "2rem", textAlign: "center", maxWidth: 400 }}
+        >
           <h2 style={{ color: "var(--theme-red-600)" }}>Oops!</h2>
           <p>{error}</p>
         </Paper>
@@ -155,47 +189,119 @@ export default function StudentPollView() {
   }
 
   if (!poll || questions.length === 0) {
-    return <div style={{ textAlign: "center", padding: "2rem" }}>Loading poll...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: "2rem" }}>
+        Loading poll...
+      </div>
+    );
   }
 
   if (poll.status === "closed" || currentQuestionIndex >= questions.length) {
     const isClosed = poll.status === "closed";
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh", backgroundColor: "var(--theme-neutral-50)", padding: "2rem 1rem" }}>
-        <Paper withBorder style={{ width: "100%", maxWidth: 800, padding: "2rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          minHeight: "100vh",
+          backgroundColor: "var(--theme-neutral-50)",
+          padding: "2rem 1rem",
+        }}
+      >
+        <Paper
+          withBorder
+          style={{ width: "100%", maxWidth: 800, padding: "2rem" }}
+        >
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             {isClosed ? (
               <>
-                <h1 style={{ fontFamily: "var(--font-serif)", marginBottom: "0.5rem" }}>This poll is closed</h1>
-                <p style={{ color: "var(--theme-neutral-600)" }}>You can no longer submit responses, but you can review the answer key below.</p>
+                <h1
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  This poll is closed
+                </h1>
+                <p style={{ color: "var(--theme-neutral-600)" }}>
+                  You can no longer submit responses, but you can review the
+                  answer key below.
+                </p>
               </>
             ) : (
               <>
-                <IconCheck size={48} color="var(--theme-primary-500)" style={{ marginBottom: "1rem" }} />
-                <h1 style={{ fontFamily: "var(--font-serif)", marginBottom: "0.5rem" }}>You're all done!</h1>
-                <p style={{ color: "var(--theme-neutral-600)" }}>Thank you for participating. Here is the answer key for your review.</p>
+                <IconCheck
+                  size={48}
+                  color="var(--theme-primary-500)"
+                  style={{ marginBottom: "1rem" }}
+                />
+                <h1
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  You're all done!
+                </h1>
+                <p style={{ color: "var(--theme-neutral-600)" }}>
+                  Thank you for participating. Here is the answer key for your
+                  review.
+                </p>
               </>
             )}
             <div style={{ marginTop: "1.5rem" }}>
-               <Button variant="default" leftSection={<IconDownload size={16} />} onClick={handleDownloadKey}>
-                 Download HTML Answer Key
-               </Button>
+              <Button
+                variant="default"
+                leftSection={<IconDownload size={16} />}
+                onClick={handleDownloadKey}
+              >
+                Download HTML Answer Key
+              </Button>
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
+          >
             {questions.map((q, i) => (
-              <div key={q.id} style={{ padding: "1.5rem", backgroundColor: "white", borderRadius: "8px", border: "1px solid var(--theme-neutral-200)" }}>
-                <div style={{ margin: "0 0 1rem 0", fontSize: "1.125rem", lineHeight: 1.4, fontWeight: "bold" }}>{i + 1}. {parse(q.question_text)}</div>
-                <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div
+                key={q.id}
+                style={{
+                  padding: "1.5rem",
+                  backgroundColor: "var(--theme-card-bg)",
+                  borderRadius: "8px",
+                  border: "1px solid var(--theme-neutral-200)",
+                }}
+              >
+                <div
+                  style={{
+                    margin: "0 0 1rem 0",
+                    fontSize: "1.125rem",
+                    lineHeight: 1.4,
+                    fontWeight: "bold",
+                  }}
+                >
+                  {i + 1}. {parse(q.question_text)}
+                </div>
+                <ul
+                  style={{
+                    listStyleType: "none",
+                    padding: 0,
+                    margin: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
                   {q.options.map((opt, optIndex) => {
                     const isCorrect = optIndex === q.correct_option_index;
                     const isSelected = studentResponses[q.id] === optIndex;
-                    
+
                     let bgColor = "var(--theme-neutral-50)";
                     let borderColor = "var(--theme-neutral-200)";
                     let textColor = "inherit";
-                    
+
                     if (isCorrect) {
                       bgColor = "var(--theme-primary-50)";
                       borderColor = "var(--theme-primary-200)";
@@ -207,32 +313,81 @@ export default function StudentPollView() {
                     }
 
                     return (
-                      <li key={optIndex} style={{ 
-                        padding: "0.75rem", 
-                        borderRadius: "6px", 
-                        backgroundColor: bgColor,
-                        border: `1px solid ${borderColor}`,
-                        color: textColor,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        fontWeight: isCorrect || isSelected ? 600 : 400
-                      }}>
-                        {isCorrect && <IconCheck size={18} color="var(--theme-primary-600)" />}
-                        {isSelected && !isCorrect && <strong style={{ color: "var(--theme-red-600)", padding: "0 2px" }}>✕</strong>}
+                      <li
+                        key={optIndex}
+                        style={{
+                          padding: "0.75rem",
+                          borderRadius: "6px",
+                          backgroundColor: bgColor,
+                          border: `1px solid ${borderColor}`,
+                          color: textColor,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          fontWeight: isCorrect || isSelected ? 600 : 400,
+                        }}
+                      >
+                        {isCorrect && (
+                          <IconCheck
+                            size={18}
+                            color="var(--theme-primary-600)"
+                          />
+                        )}
+                        {isSelected && !isCorrect && (
+                          <strong
+                            style={{
+                              color: "var(--theme-red-600)",
+                              padding: "0 2px",
+                            }}
+                          >
+                            ✕
+                          </strong>
+                        )}
                         {opt}
-                        {isSelected && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: isCorrect ? "var(--theme-primary-700)" : "var(--theme-red-700)", fontWeight: "bold" }}>YOUR ANSWER</span>}
+                        {isSelected && (
+                          <span
+                            style={{
+                              marginLeft: "auto",
+                              fontSize: "0.75rem",
+                              color: isCorrect
+                                ? "var(--theme-primary-700)"
+                                : "var(--theme-red-700)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            YOUR ANSWER
+                          </span>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
                 {studentResponses[q.id] === -1 && (
-                  <div style={{ marginTop: "0.5rem", color: "var(--theme-neutral-500)", fontSize: "0.875rem", fontStyle: "italic", padding: "0.5rem", backgroundColor: "var(--theme-neutral-100)", borderRadius: "4px" }}>
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      color: "var(--theme-neutral-500)",
+                      fontSize: "0.875rem",
+                      fontStyle: "italic",
+                      padding: "0.5rem",
+                      backgroundColor: "var(--theme-neutral-100)",
+                      borderRadius: "4px",
+                    }}
+                  >
                     You skipped this question.
                   </div>
                 )}
                 {q.explanation && (
-                  <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "var(--theme-blue-50)", borderLeft: "4px solid var(--theme-blue-500)", borderRadius: "4px", fontSize: "0.875rem" }}>
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      backgroundColor: "var(--theme-blue-50)",
+                      borderLeft: "4px solid var(--theme-blue-500)",
+                      borderRadius: "4px",
+                      fontSize: "0.875rem",
+                    }}
+                  >
                     <strong>Explanation:</strong> {q.explanation}
                   </div>
                 )}
@@ -246,13 +401,45 @@ export default function StudentPollView() {
 
   if (!hasStarted && poll.status === "active") {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "var(--theme-neutral-50)" }}>
-        <Paper withBorder style={{ padding: "3rem", maxWidth: 500, width: "100%" }}>
-          <h1 style={{ fontFamily: "var(--font-serif)", marginBottom: "1rem", textAlign: "center" }}>Join Poll</h1>
-          <p style={{ color: "var(--theme-neutral-600)", marginBottom: "2rem", textAlign: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          backgroundColor: "var(--theme-neutral-50)",
+        }}
+      >
+        <Paper
+          withBorder
+          style={{ padding: "3rem", maxWidth: 500, width: "100%" }}
+        >
+          <h1
+            style={{
+              fontFamily: "var(--font-serif)",
+              marginBottom: "1rem",
+              textAlign: "center",
+            }}
+          >
+            Join Poll
+          </h1>
+          <p
+            style={{
+              color: "var(--theme-neutral-600)",
+              marginBottom: "2rem",
+              textAlign: "center",
+            }}
+          >
             Enter your details to participate. Both fields are optional.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.5rem",
+              marginBottom: "2rem",
+            }}
+          >
             <TextInput
               label="Name (Optional)"
               placeholder="e.g. Dr. Smith"
@@ -266,7 +453,11 @@ export default function StudentPollView() {
               onChange={(e) => setHospital(e.target.value)}
             />
           </div>
-          <Button size="lg" style={{ width: "100%" }} onClick={() => setHasStarted(true)}>
+          <Button
+            size="lg"
+            style={{ width: "100%" }}
+            onClick={() => setHasStarted(true)}
+          >
             Start Poll
           </Button>
         </Paper>
@@ -277,14 +468,48 @@ export default function StudentPollView() {
   const q = questions[currentQuestionIndex];
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "var(--theme-neutral-50)", padding: "1rem" }}>
-      <Paper withBorder style={{ width: "100%", maxWidth: 600, padding: "2rem", display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: "0.875rem", color: "var(--theme-neutral-500)", marginBottom: "1.5rem", fontWeight: "bold" }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "var(--theme-neutral-50)",
+        padding: "1rem",
+      }}
+    >
+      <Paper
+        withBorder
+        style={{
+          width: "100%",
+          maxWidth: 600,
+          padding: "2rem",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.875rem",
+            color: "var(--theme-neutral-500)",
+            marginBottom: "1.5rem",
+            fontWeight: "bold",
+          }}
+        >
           Question {currentQuestionIndex + 1} of {questions.length}
         </div>
-        
-        <div style={{ fontSize: "1.5rem", marginBottom: "2rem", lineHeight: 1.4, fontWeight: "bold" }}>{parse(q.question_text)}</div>
-        
+
+        <div
+          style={{
+            fontSize: "1.5rem",
+            marginBottom: "2rem",
+            lineHeight: 1.4,
+            fontWeight: "bold",
+          }}
+        >
+          {parse(q.question_text)}
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {shuffledIndices.map((originalIndex) => {
             const opt = q.options[originalIndex];
@@ -296,25 +521,28 @@ export default function StudentPollView() {
                   padding: "1rem 1.5rem",
                   borderRadius: "8px",
                   border: "2px solid var(--theme-neutral-200)",
-                  backgroundColor: "white",
+                  backgroundColor: "var(--theme-card-bg)",
                   color: "var(--theme-neutral-900)",
                   cursor: hasSubmitted ? "default" : "pointer",
                   textAlign: "left",
                   fontSize: "1.125rem",
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
                 }}
                 disabled={hasSubmitted}
                 onMouseEnter={(e) => {
                   if (!hasSubmitted) {
                     e.currentTarget.style.borderColor = "var(--theme-blue-400)";
-                    e.currentTarget.style.backgroundColor = "var(--theme-blue-50)";
+                    e.currentTarget.style.backgroundColor =
+                      "var(--theme-blue-50)";
                     e.currentTarget.style.color = "var(--theme-blue-900)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!hasSubmitted) {
-                    e.currentTarget.style.borderColor = "var(--theme-neutral-200)";
-                    e.currentTarget.style.backgroundColor = "white";
+                    e.currentTarget.style.borderColor =
+                      "var(--theme-neutral-200)";
+                    e.currentTarget.style.backgroundColor =
+                      "var(--theme-card-bg)";
                     e.currentTarget.style.color = "var(--theme-neutral-900)";
                   }
                 }}
@@ -325,9 +553,15 @@ export default function StudentPollView() {
           })}
         </div>
 
-        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
-          <Button 
-            variant="ghost" 
+        <div
+          style={{
+            marginTop: "2rem",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Button
+            variant="ghost"
             onClick={() => handleOptionClick(-1)}
             disabled={hasSubmitted}
             style={{ color: "var(--theme-neutral-500)" }}
