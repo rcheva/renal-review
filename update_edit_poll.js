@@ -1,5 +1,5 @@
-const fs = require('fs');
-let content = fs.readFileSync('src/app/polling/EditPollView.tsx', 'utf8');
+const fs = require("fs");
+let content = fs.readFileSync("src/app/polling/EditPollView.tsx", "utf8");
 
 content = content.replace(
   'import { IconPlus, IconTrash, IconCheck, IconCopy, IconBrandWhatsapp, IconBrain, IconDownload } from "@tabler/icons-react";',
@@ -61,12 +61,12 @@ content = content.replace(
 );
 
 content = content.replace(
-  '                </IconButton>\n              </div>',
-  '                </IconButton>\n                </div>\n              </div>'
+  "                </IconButton>\n              </div>",
+  "                </IconButton>\n                </div>\n              </div>"
 );
 
 content = content.replace(
-  '                <h3 style={{ margin: 0 }}>{i + 1}. {q.question_text}</h3>',
+  "                <h3 style={{ margin: 0 }}>{i + 1}. {q.question_text}</h3>",
   '                <div style={{ margin: 0, fontWeight: "bold", fontSize: "1.125rem" }}>{i + 1}. {parse(q.question_text)}</div>'
 );
 
@@ -81,7 +81,7 @@ content = content.replace(
 );
 
 content = content.replace(
-  '  return (\n    <>',
+  "  return (\n    <>",
   `  return (
     <>
       <Modal opened={!!editingQuestion} onClose={() => setEditingQuestion(null)} title="Edit Question" size="lg">
@@ -147,4 +147,4 @@ content = content.replace(
 `
 );
 
-fs.writeFileSync('src/app/polling/EditPollView.tsx', content);
+fs.writeFileSync("src/app/polling/EditPollView.tsx", content);

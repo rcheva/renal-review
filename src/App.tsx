@@ -48,12 +48,15 @@ function AppContent() {
   const [sidebarMenuOpened, sidebarHandlers] = useDisclosure(false);
 
   const [registered] = useLocalStorage("registered", false);
-  const [hasWipedDb, setHasWipedDb] = useLocalStorage("hasWipedOldDb_v4", false);
+  const [hasWipedDb, setHasWipedDb] = useLocalStorage(
+    "hasWipedOldDb_v4",
+    false
+  );
 
   useEffect(() => {
     // Force auto-sync off for now per user request
     setSetting("#cloud_autoSyncEnabled", false);
-    
+
     if (!hasWipedDb) {
       setHasWipedDb(true);
     }

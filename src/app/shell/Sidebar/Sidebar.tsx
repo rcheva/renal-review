@@ -7,7 +7,6 @@ import {
   IconCards,
   IconChartBar,
   IconHome,
-  IconRobot,
   IconSettings,
   IconTrophy,
   IconX,
@@ -110,13 +109,21 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
             />
-            <NavItem
-              label={"AI Assistant"}
+            {/* Temporarily hidden per 29 July 2026 Audit (see docs/AI_INTEGRATION_AUDIT_2026-07-29.md) */}
+            {/* <NavItem
+              label={"NotebookLM Assistant"}
               path="/ai"
               icon={<IconRobot />}
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
-            />
+            /> */}
+            {/* <NavItem
+              label={"AnythingLLM Assistant"}
+              path="/anything"
+              icon={<IconBrain />}
+              collapsed={minimalMode}
+              onClick={fullscreenMode ? menuHandlers.close : undefined}
+            /> */}
             <NavItem
               label={t("settings.title")}
               path="/settings"

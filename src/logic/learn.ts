@@ -218,7 +218,10 @@ export function useLearning(
             currentCardRepeatInfo[rating].review_log
           );
         }
-        if (currentCardRepeatInfo[rating].card.scheduled_days === 0 && rating < 3) {
+        if (
+          currentCardRepeatInfo[rating].card.scheduled_days === 0 &&
+          rating < 3
+        ) {
           setTimeCriticalCards((tcCards) =>
             [
               ...tcCards,

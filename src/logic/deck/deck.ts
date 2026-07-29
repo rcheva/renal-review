@@ -7,7 +7,13 @@ export interface DeckStatCache {
   includesSubdecks: boolean;
 }
 
-export type MaterialType = 'doc' | 'resume' | 'table' | 'ppt' | 'video' | 'audio';
+export type MaterialType =
+  | "doc"
+  | "resume"
+  | "table"
+  | "ppt"
+  | "video"
+  | "audio";
 
 export interface StudyMaterial {
   id: string;

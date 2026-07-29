@@ -9,7 +9,10 @@ import viteTsconfigPaths from "vite-tsconfig-paths";
 const pkg = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
 
 export default defineConfig({
-  base: process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM ? "/" : "/renal-review/",
+  base:
+    process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM
+      ? "/"
+      : "/renal-review/",
   css: {
     modules: {},
   },
@@ -31,72 +34,82 @@ export default defineConfig({
     }),
     viteTsconfigPaths(),
     Checker({ typescript: true }),
-    ...(process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM ? [] : [VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["logo.svg", "logo256.png", "logo512.png", "fonts/**/*"],
-      manifest: {
-        name: "Renal Review",
-        short_name: "RenalReview",
-        description: "Renal Review is a specialized flash card app for nephrology.",
-        theme_color: "#ffffff",
-        background_color: "#ffffff",
-        display: "fullscreen",
-        orientation: "portrait-primary",
-        start_url: "/",
-        icons: [
-          {
-            src: "logo256.png",
-            sizes: "256x256",
-            type: "image/png",
-          },
-          {
-            src: "logo512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "logo512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
-      workbox: {
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-cache",
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+    ...(process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM
+      ? []
+      : [
+          VitePWA({
+            registerType: "autoUpdate",
+            includeAssets: [
+              "logo.svg",
+              "logo256.png",
+              "logo512.png",
+              "fonts/**/*",
+            ],
+            manifest: {
+              name: "Renal Review",
+              short_name: "RenalReview",
+              description:
+                "Renal Review is a specialized flash card app for nephrology.",
+              theme_color: "#ffffff",
+              background_color: "#ffffff",
+              display: "fullscreen",
+              orientation: "portrait-primary",
+              start_url: "/",
+              icons: [
+                {
+                  src: "logo256.png",
+                  sizes: "256x256",
+                  type: "image/png",
+                },
+                {
+                  src: "logo512.png",
+                  sizes: "512x512",
+                  type: "image/png",
+                },
+                {
+                  src: "logo512.png",
+                  sizes: "512x512",
+                  type: "image/png",
+                  purpose: "maskable",
+                },
+              ],
             },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "gstatic-fonts-cache",
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+            workbox: {
+              maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+              globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+              runtimeCaching: [
+                {
+                  urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                  handler: "CacheFirst",
+                  options: {
+                    cacheName: "google-fonts-cache",
+                    expiration: {
+                      maxEntries: 10,
+                      maxAgeSeconds: 60 * 60 * 24 * 365,
+                    },
+                    cacheableResponse: {
+                      statuses: [0, 200],
+                    },
+                  },
+                },
+                {
+                  urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+                  handler: "CacheFirst",
+                  options: {
+                    cacheName: "gstatic-fonts-cache",
+                    expiration: {
+                      maxEntries: 10,
+                      maxAgeSeconds: 60 * 60 * 24 * 365,
+                    },
+                    cacheableResponse: {
+                      statuses: [0, 200],
+                    },
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
-    })]),
+          }),
+        ]),
   ],
   clearScreen: false,
   server: {
@@ -119,8 +132,14 @@ export default defineConfig({
   ],
   build: {
     outDir: "dist",
-    target: (process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM) === "windows" ? "chrome105" : "safari13",
-    minify: !(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG) ? "esbuild" : false,
+    target:
+      (process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM) ===
+      "windows"
+        ? "chrome105"
+        : "safari13",
+    minify: !(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG)
+      ? "esbuild"
+      : false,
     sourcemap: !!(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG),
   },
 });

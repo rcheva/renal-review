@@ -52,7 +52,12 @@ function NormalCardEditor({
       front: frontContentRef.current,
       back: backContentRef.current,
       sourceReference: sourceRefContentRef.current,
-      tags: tagsRef.current ? tagsRef.current.split(",").map(t => t.trim()).filter(Boolean) : [],
+      tags: tagsRef.current
+        ? tagsRef.current
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
     }),
     []
   );
@@ -126,29 +131,41 @@ function NormalCardEditor({
         <Text size="sm" weight="semibold">
           Source Reference (e.g. Zotero link)
         </Text>
-        <input 
-          type="text" 
+        <input
+          type="text"
           defaultValue={sourceRefContentRef.current}
           onChange={(e) => {
             sourceRefContentRef.current = e.target.value;
             debouncedAutoSave();
           }}
-          style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border-color)", background: "var(--background-color)" }}
+          style={{
+            width: "100%",
+            padding: "8px",
+            borderRadius: "4px",
+            border: "1px solid var(--border-color)",
+            background: "var(--background-color)",
+          }}
         />
       </Stack>
       <Stack gap="xs">
         <Text size="sm" weight="semibold">
           Tags (comma separated, e.g. Student, Consultant)
         </Text>
-        <input 
-          type="text" 
+        <input
+          type="text"
           defaultValue={tagsRef.current}
           onChange={(e) => {
             tagsRef.current = e.target.value;
             debouncedAutoSave();
           }}
           placeholder="e.g. CKD, Student, Hard"
-          style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid var(--border-color)", background: "var(--background-color)" }}
+          style={{
+            width: "100%",
+            padding: "8px",
+            borderRadius: "4px",
+            border: "1px solid var(--border-color)",
+            background: "var(--background-color)",
+          }}
         />
       </Stack>
     </Stack>

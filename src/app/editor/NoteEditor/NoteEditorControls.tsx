@@ -7,13 +7,13 @@ import {
   HighlightControl,
   ItalicControl,
   LinkControl,
+  MediaUploadControl,
   OrderedListControl,
   StrikethroughControl,
   SubscriptControl,
   SuperscriptControl,
   UnderlineControl,
   UnlinkControl,
-  MediaUploadControl,
 } from "@/components/ui/RichTextEditorControls";
 import { useSettings } from "@/logic/settings/hooks/useSettings";
 import { Editor } from "@tiptap/react";

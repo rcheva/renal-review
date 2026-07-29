@@ -1,11 +1,18 @@
-import { Button, Modal, Select, Stack, TextInput, Textarea } from "@/components/ui";
+import {
+  Button,
+  Modal,
+  Select,
+  Stack,
+  TextInput,
+  Textarea,
+} from "@/components/ui";
 import { Tabs } from "@/components/ui/Tabs";
+import { isTauri } from "@/lib/isTauri";
 import { db } from "@/logic/db";
 import { Deck, MaterialType, StudyMaterial } from "@/logic/deck/deck";
 import { BasicNoteTypeAdapter } from "@/logic/type-implementations/normal/BasicNote";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { isTauri } from "@/lib/isTauri";
 
 interface AddMaterialModalProps {
   deck: Deck;
@@ -22,12 +29,16 @@ const MATERIAL_TYPES = [
   { value: "table", label: "Data Table" },
 ];
 
-export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialModalProps) {
+export default function AddMaterialModal({
+  deck,
+  opened,
+  onClose,
+}: AddMaterialModalProps) {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<MaterialType>("doc");
   const [url, setUrl] = useState("");
   const [content, setContent] = useState("");
-  
+
   const [jsonText, setJsonText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
@@ -44,9 +55,9 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
     };
 
     const currentMaterials = deck.studyMaterials || [];
-    
+
     await db.decks.update(deck.id, {
-      studyMaterials: [...currentMaterials, newMaterial]
+      studyMaterials: [...currentMaterials, newMaterial],
     });
 
     // Reset form
@@ -60,21 +71,24 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
   const handleBrowseFile = async () => {
     try {
       if (!isTauri()) {
-        alert("Selecting local files is only available in the Mac Desktop app.");
+        alert(
+          "Selecting local files is only available in the Mac Desktop app."
+        );
         return;
       }
       const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
       const selectedPath = await openDialog({
         multiple: false,
         directory: false,
-        defaultPath: "/Users/julio/Library/CloudStorage/OneDrive-Personal/renal review",
+        defaultPath:
+          "/Users/julio/Library/CloudStorage/OneDrive-Personal/renal review",
       });
-      if (selectedPath && typeof selectedPath === 'string') {
+      if (selectedPath && typeof selectedPath === "string") {
         setUrl(selectedPath);
         if (!title.trim()) {
-           // Autocomplete title from filename if empty
-           const filename = selectedPath.split(/[/\\]/).pop() || "";
-           setTitle(filename);
+          // Autocomplete title from filename if empty
+          const filename = selectedPath.split(/[/\\]/).pop() || "";
+          setTitle(filename);
         }
       }
     } catch (err) {
@@ -96,9 +110,13 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
           console.warn("Skipping invalid card format", card);
           continue;
         }
-        
+
         let backText = `<p>${card.correct_answer}</p>`;
-        if (card.incorrect_answers && Array.isArray(card.incorrect_answers) && card.incorrect_answers.length > 0) {
+        if (
+          card.incorrect_answers &&
+          Array.isArray(card.incorrect_answers) &&
+          card.incorrect_answers.length > 0
+        ) {
           backText += `<br/><p><b>Incorrect options:</b></p><ul>`;
           for (const wrong of card.incorrect_answers) {
             backText += `<li>${wrong}</li>`;
@@ -106,12 +124,15 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
           backText += `</ul>`;
         }
 
-        await BasicNoteTypeAdapter.createNote({
-          front: card.question,
-          back: backText,
-        }, deck);
+        await BasicNoteTypeAdapter.createNote(
+          {
+            front: card.question,
+            back: backText,
+          },
+          deck
+        );
       }
-      
+
       setJsonText("");
       onClose();
       alert(`Successfully imported ${parsed.length} flashcards!`);
@@ -129,7 +150,7 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
           <Tabs.Tab value="resource">Study Material</Tabs.Tab>
           <Tabs.Tab value="json">Import Flashcards</Tabs.Tab>
         </Tabs.List>
-        
+
         <Tabs.Panel value="resource">
           <Stack gap="md" style={{ marginTop: "var(--spacing-md)" }}>
             <TextInput
@@ -139,7 +160,7 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
               onChange={(e) => setTitle(e.currentTarget.value)}
               required
             />
-            
+
             <Select
               label="Material Type"
               options={MATERIAL_TYPES}
@@ -147,7 +168,13 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
               onChange={(val) => setType(val as MaterialType)}
             />
 
-            <div style={{ display: "flex", alignItems: "flex-end", gap: "var(--spacing-sm)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: "var(--spacing-sm)",
+              }}
+            >
               <div style={{ flex: 1 }}>
                 <TextInput
                   label="Resource URL or Local Path"
@@ -157,7 +184,11 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
                   onChange={(e) => setUrl(e.currentTarget.value)}
                 />
               </div>
-              <Button variant="subtle" onClick={handleBrowseFile} style={{ marginBottom: "var(--spacing-md)" }}>
+              <Button
+                variant="subtle"
+                onClick={handleBrowseFile}
+                style={{ marginBottom: "var(--spacing-md)" }}
+              >
                 Browse...
               </Button>
             </div>
@@ -171,26 +202,51 @@ export default function AddMaterialModal({ deck, opened, onClose }: AddMaterialM
               minRows={5}
             />
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--spacing-md)", marginTop: "var(--spacing-md)" }}>
-              <Button variant="subtle" onClick={onClose}>Cancel</Button>
-              <Button onClick={handleSave} disabled={!title.trim()}>Save Material</Button>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "var(--spacing-md)",
+                marginTop: "var(--spacing-md)",
+              }}
+            >
+              <Button variant="subtle" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={!title.trim()}>
+                Save Material
+              </Button>
             </div>
           </Stack>
         </Tabs.Panel>
-        
+
         <Tabs.Panel value="json">
           <Stack gap="md" style={{ marginTop: "var(--spacing-md)" }}>
             <Textarea
               label="Flashcards JSON"
-              placeholder={'[\n  {\n    "question": "...",\n    "correct_answer": "..."\n  }\n]'}
+              placeholder={
+                '[\n  {\n    "question": "...",\n    "correct_answer": "..."\n  }\n]'
+              }
               description="Paste an array of flashcards generated by an LLM."
               value={jsonText}
               onChange={(e) => setJsonText(e.currentTarget.value)}
               minRows={10}
             />
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--spacing-md)", marginTop: "var(--spacing-md)" }}>
-              <Button variant="subtle" onClick={onClose} disabled={isImporting}>Cancel</Button>
-              <Button onClick={handleImportJson} disabled={!jsonText.trim() || isImporting}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "var(--spacing-md)",
+                marginTop: "var(--spacing-md)",
+              }}
+            >
+              <Button variant="subtle" onClick={onClose} disabled={isImporting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImportJson}
+                disabled={!jsonText.trim() || isImporting}
+              >
                 {isImporting ? "Importing..." : "Import Flashcards"}
               </Button>
             </div>

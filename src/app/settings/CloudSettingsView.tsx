@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useNotifications } from "@/components/Notification";
-import { supabase } from "@/logic/supabase";
-import { db } from "@/logic/db";
-import { exportDB, importInto } from "dexie-export-import";
 import { useAuthSession } from "@/app/auth/useAuthSession";
+import { useNotifications } from "@/components/Notification";
+import { db } from "@/logic/db";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { setSetting } from "@/logic/settings/setSetting";
+import { supabase } from "@/logic/supabase";
 import { useSyncManager } from "@/logic/sync/SyncManager";
+import { exportDB, importInto } from "dexie-export-import";
+import { useState } from "react";
 import Section from "./Section";
 import "./CloudSettingsView.css";
 
@@ -21,7 +21,11 @@ export default function CloudSettingsView() {
     if (!session?.user) return;
     setLoading(true);
     try {
-      showNotification({ title: "Backup Started", message: "Exporting local database...", type: "info" });
+      showNotification({
+        title: "Backup Started",
+        message: "Exporting local database...",
+        type: "info",
+      });
       const blob = await exportDB(db);
       const text = await blob.text();
       const data = JSON.parse(text);
@@ -32,9 +36,17 @@ export default function CloudSettingsView() {
 
       if (error) throw error;
 
-      showNotification({ title: "Backup Complete", message: "Successfully backed up to the cloud.", type: "success" });
+      showNotification({
+        title: "Backup Complete",
+        message: "Successfully backed up to the cloud.",
+        type: "success",
+      });
     } catch (err: any) {
-      showNotification({ title: "Backup Failed", message: err.message, type: "error" });
+      showNotification({
+        title: "Backup Failed",
+        message: err.message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -42,15 +54,23 @@ export default function CloudSettingsView() {
 
   const handleRestore = async () => {
     if (!session?.user) return;
-    
-    if (!window.confirm("WARNING: This will overwrite your current local flashcards with the cloud backup. Are you sure?")) {
+
+    if (
+      !window.confirm(
+        "WARNING: This will overwrite your current local flashcards with the cloud backup. Are you sure?"
+      )
+    ) {
       return;
     }
 
     setLoading(true);
     try {
-      showNotification({ title: "Restore Started", message: "Downloading from cloud...", type: "info" });
-      
+      showNotification({
+        title: "Restore Started",
+        message: "Downloading from cloud...",
+        type: "info",
+      });
+
       const { data: backup, error } = await supabase
         .from("user_backups")
         .select("data")
@@ -64,19 +84,27 @@ export default function CloudSettingsView() {
       const text = JSON.stringify(backup.data);
       const blob = new Blob([text], { type: "application/json" });
 
-      await importInto(db, blob, { 
+      await importInto(db, blob, {
         clearTablesBeforeImport: true,
-        overwriteValues: true 
+        overwriteValues: true,
       });
 
-      showNotification({ title: "Restore Complete", message: "Successfully restored from the cloud! Please refresh the page.", type: "success" });
-      
+      showNotification({
+        title: "Restore Complete",
+        message:
+          "Successfully restored from the cloud! Please refresh the page.",
+        type: "success",
+      });
+
       setTimeout(() => {
         window.location.reload();
       }, 1500);
-
     } catch (err: any) {
-      showNotification({ title: "Restore Failed", message: err.message, type: "error" });
+      showNotification({
+        title: "Restore Failed",
+        message: err.message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -95,45 +123,52 @@ export default function CloudSettingsView() {
     <Section title="Sync Flashcards">
       <div className="cloud-settings">
         <p className="cloud-settings__desc">
-          Logged in as <strong>{session.user.email}</strong>. Use these buttons to manually sync your decks to and from the cloud.
+          Logged in as <strong>{session.user.email}</strong>. Use these buttons
+          to manually sync your decks to and from the cloud.
         </p>
-        
+
         <div className="cloud-settings__toggle">
           <label className="cloud-settings__toggle-label">
-            <input 
-              type="checkbox" 
-              checked={autoSyncEnabled} 
-              onChange={(e) => setSetting("#cloud_autoSyncEnabled", e.target.checked)}
+            <input
+              type="checkbox"
+              checked={autoSyncEnabled}
+              onChange={(e) =>
+                setSetting("#cloud_autoSyncEnabled", e.target.checked)
+              }
             />
             Enable Background Auto-Sync
           </label>
           <p className="cloud-settings__status-text">
-            {isSyncing ? "Syncing right now..." : (lastSyncedAt ? `Last synced: ${new Date(lastSyncedAt).toLocaleString()}` : 'Never synced automatically.')}
+            {isSyncing
+              ? "Syncing right now..."
+              : lastSyncedAt
+                ? `Last synced: ${new Date(lastSyncedAt).toLocaleString()}`
+                : "Never synced automatically."}
           </p>
         </div>
         <div className="cloud-settings__actions">
-          <button 
-            className="cloud-settings__btn cloud-settings__btn--primary" 
+          <button
+            className="cloud-settings__btn cloud-settings__btn--primary"
             onClick={handleBackup}
             disabled={loading}
           >
             {loading ? "Processing..." : "Backup to Cloud"}
           </button>
-          <button 
-            className="cloud-settings__btn cloud-settings__btn--secondary" 
+          <button
+            className="cloud-settings__btn cloud-settings__btn--secondary"
             onClick={handleRestore}
             disabled={loading}
           >
             {loading ? "Processing..." : "Restore from Cloud"}
           </button>
         </div>
-        <button 
-            className="cloud-settings__btn cloud-settings__btn--danger" 
-            onClick={handleSignOut}
-            disabled={loading}
-            style={{ marginTop: '1rem' }}
-          >
-            Sign Out
+        <button
+          className="cloud-settings__btn cloud-settings__btn--danger"
+          onClick={handleSignOut}
+          disabled={loading}
+          style={{ marginTop: "1rem" }}
+        >
+          Sign Out
         </button>
       </div>
     </Section>

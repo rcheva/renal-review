@@ -1,9 +1,9 @@
 import DangerousConfirmModal from "@/components/DangerousConfirmModal";
 import { Button } from "@/components/ui/Button";
 import {
+  IconCloudUpload,
   IconDatabaseExport,
   IconDatabaseImport,
-  IconCloudUpload,
   IconTrash,
 } from "@tabler/icons-react";
 import { exportDB, importInto } from "dexie-export-import";
@@ -12,9 +12,9 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../../../logic/db";
 import { supabase } from "../../../logic/supabase";
 import "./DatabaseSettingsView.css";
+import { useNotifications } from "@/components/Notification";
 import Section from "../Section";
 import StorageSection from "./StorageSection";
-import { useNotifications } from "@/components/Notification";
 
 const BASE = "database-settings-view";
 
@@ -29,11 +29,15 @@ export default function DatabaseSettingsView() {
 
   const handleRestoreFromCloud = async () => {
     setIsRestoringCloud(true);
-    showNotification({ title: "Restoring...", message: "Pulling latest database from Supabase cloud...", type: "info" });
+    showNotification({
+      title: "Restoring...",
+      message: "Pulling latest database from Supabase cloud...",
+      type: "info",
+    });
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user) {
-         throw new Error("You must be logged in to restore from cloud.");
+        throw new Error("You must be logged in to restore from cloud.");
       }
 
       // Fetch the latest backup for this user
@@ -50,17 +54,27 @@ export default function DatabaseSettingsView() {
       }
 
       const latestBackupData = backups[0].data;
-      const blob = new Blob([JSON.stringify(latestBackupData)], { type: "application/json" });
-      
+      const blob = new Blob([JSON.stringify(latestBackupData)], {
+        type: "application/json",
+      });
+
       await importInto(db, blob, { overwriteValues: true });
-      showNotification({ title: "Success", message: "Database successfully restored from Supabase! Reloading...", type: "success" });
-      
+      showNotification({
+        title: "Success",
+        message: "Database successfully restored from Supabase! Reloading...",
+        type: "success",
+      });
+
       setTimeout(() => {
         window.location.reload();
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      showNotification({ title: "Cloud Restore Failed", message: err.message || "Unknown error", type: "error" });
+      showNotification({
+        title: "Cloud Restore Failed",
+        message: err.message || "Unknown error",
+        type: "error",
+      });
     } finally {
       setIsRestoringCloud(false);
     }
@@ -68,7 +82,11 @@ export default function DatabaseSettingsView() {
 
   const handleManualCloudSync = async () => {
     setIsSyncingCloud(true);
-    showNotification({ title: "Syncing...", message: "Pushing local database to Supabase cloud...", type: "info" });
+    showNotification({
+      title: "Syncing...",
+      message: "Pushing local database to Supabase cloud...",
+      type: "info",
+    });
     try {
       const blob = await exportDB(db);
       const text = await blob.text();
@@ -76,7 +94,7 @@ export default function DatabaseSettingsView() {
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user) {
-         throw new Error("You must be logged in to sync to cloud.");
+        throw new Error("You must be logged in to sync to cloud.");
       }
 
       const { error } = await supabase
@@ -86,10 +104,18 @@ export default function DatabaseSettingsView() {
         .single();
 
       if (error) throw error;
-      showNotification({ title: "Success", message: "Database successfully backed up to Supabase!", type: "success" });
+      showNotification({
+        title: "Success",
+        message: "Database successfully backed up to Supabase!",
+        type: "success",
+      });
     } catch (err: any) {
       console.error(err);
-      showNotification({ title: "Cloud Sync Failed", message: err.message || "Unknown error", type: "error" });
+      showNotification({
+        title: "Cloud Sync Failed",
+        message: err.message || "Unknown error",
+        type: "error",
+      });
     } finally {
       setIsSyncingCloud(false);
     }

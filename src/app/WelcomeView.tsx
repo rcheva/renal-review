@@ -54,8 +54,9 @@ export default function WelcomeView() {
           <div className={`${BASE}__feature`}>
             <h2 className={`${BASE}__feature-title`}>Works Everywhere</h2>
             <p className={`${BASE}__feature-text`}>
-              Renal Review is a progressive web app, meaning it can install everywhere.
-              It is even availabe offline and optimized for mobile and desktop.
+              Renal Review is a progressive web app, meaning it can install
+              everywhere. It is even availabe offline and optimized for mobile
+              and desktop.
             </p>
           </div>
 
@@ -79,8 +80,8 @@ export default function WelcomeView() {
           <div className={`${BASE}__feature`}>
             <h2 className={`${BASE}__feature-title`}>Free & Open Source</h2>
             <p className={`${BASE}__feature-text`}>
-              Renal Review is open source and free, it will forever stay that way. We
-              just believe thoughtful learning software.
+              Renal Review is open source and free, it will forever stay that
+              way. We just believe thoughtful learning software.
             </p>
           </div>
         </section>
@@ -90,18 +91,18 @@ export default function WelcomeView() {
           <p className={`${BASE}__body-text`}>
             Spaced repetition software should be open source, yet still
             approachable and friendly. Effective tools shouldn't sacrifice
-            design for functionality or lock features behind paywalls. Renal Review is
-            being built by an flashcard enthusiatist who is frustrated with the
-            current open-source options.
+            design for functionality or lock features behind paywalls. Renal
+            Review is being built by an flashcard enthusiatist who is frustrated
+            with the current open-source options.
           </p>
           <p className={`${BASE}__body-text`}>
             <i style={{ fontFamily: "var(--font-serif)" }}>A word on AI.</i>{" "}
             Creating flashcards is part of the learning process. Skola is
             designed to support that work, not bypass it. AI has its place, but
             not in replacing the cognitive effort of card creation. Instead,
-            Renal Review explores how technology can encourage higher-order thinking
-            through features like cognitive prompts that challenge you to
-            reconsider material you've already learned.
+            Renal Review explores how technology can encourage higher-order
+            thinking through features like cognitive prompts that challenge you
+            to reconsider material you've already learned.
           </p>
         </section>
 

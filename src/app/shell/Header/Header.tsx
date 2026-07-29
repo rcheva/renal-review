@@ -1,11 +1,11 @@
 import { HamburgerButton } from "@/components/ui/HamburgerButton";
 import { breakpoints } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useSetting } from "@/logic/settings/hooks/useSetting";
+import { useSyncManager } from "@/logic/sync/SyncManager";
 import { PropsWithChildren, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { useSyncManager } from "@/logic/sync/SyncManager";
-import { useSetting } from "@/logic/settings/hooks/useSetting";
 import "./Header.css";
 
 const BASE = "header";
@@ -75,18 +75,43 @@ export default function Header({ menuOpened, menuHandlers }: HeaderProps) {
         )}
         <AppHeaderOutlet />
         {autoSyncEnabled && (
-          <div className={`header__sync-indicator ${isSyncing ? 'header__sync-indicator--active' : ''}`}>
+          <div
+            className={`header__sync-indicator ${isSyncing ? "header__sync-indicator--active" : ""}`}
+          >
             {isSyncing ? (
               <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="animate-spin"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
                 </svg>
                 Syncing...
               </>
             ) : (
               <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Synced
               </>

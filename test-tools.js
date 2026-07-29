@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 async function run() {
   const transport = new StdioClientTransport({
@@ -13,9 +13,9 @@ async function run() {
   );
 
   await mcpClient.connect(transport);
-  
+
   const result = await mcpClient.listTools();
-  const tool = result.tools.find(t => t.name === 'ask_question');
+  const tool = result.tools.find((t) => t.name === "ask_question");
   console.log(JSON.stringify(tool, null, 2));
   process.exit(0);
 }

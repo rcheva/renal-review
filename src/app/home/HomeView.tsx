@@ -1,16 +1,17 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
 import EmptyNotice from "@/components/EmptyNotice";
-import { Button, Kbd, Tooltip, Paper, TextInput } from "@/components/ui";
+import { Button, Kbd, Paper, TextInput, Tooltip } from "@/components/ui";
 import { useDocumentTitle } from "@/lib/hooks/useDocumentTitle";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
-import { IconFolder, IconPlus, IconSearch } from "@tabler/icons-react";
-import { useState, useMemo } from "react";
+import { isTauri } from "@/lib/isTauri";
+import { IconFolder, IconPlus, IconPower, IconSearch } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
 import DeckModal from "../deck/DeckModal";
 import { AppHeaderContent } from "../shell/Header/Header";
-import { useNavigate, Link } from "react-router-dom";
 import "./HomeView.css";
 
 const BASE = "home-view";
@@ -35,32 +36,58 @@ export default function HomeView() {
   const [newDeckModalOpened, setNewDeckModalOpened] = useState(false);
   const [allDecks, isReady] = useAllDecks();
   const [userName, userNameIsReady] = useSetting("#name");
-  
+
   const [searchQuery, setSearchQuery] = useState("");
 
   useHotkeys([["n", () => setNewDeckModalOpened(true)]]);
+
+  const handleQuitApp = async () => {
+    if (window.confirm("Are you sure you want to exit Renal Review completely?")) {
+      try {
+        if (isTauri()) {
+          const { invoke } = await import("@tauri-apps/api/core");
+          await invoke("quit_app");
+        } else {
+          window.location.href = "about:blank";
+          window.close();
+        }
+      } catch (err) {
+        try {
+          const { getCurrentWindow } = await import("@tauri-apps/api/window");
+          await getCurrentWindow().destroy();
+        } catch {
+          window.close();
+        }
+      }
+    }
+  };
 
   // Derive top-level topic decks
   const topicDecks = useMemo(() => {
     if (!allDecks) return [];
     return allDecks.filter(
-      (d) => (!d.superDecks || d.superDecks.length === 0) && MAIN_TOPICS.includes(d.name)
+      (d) =>
+        (!d.superDecks || d.superDecks.length === 0) &&
+        MAIN_TOPICS.includes(d.name)
     );
   }, [allDecks]);
 
   // Derive subdecks for a specific parent
   const getSubdecks = (parentId: string) => {
     if (!allDecks) return [];
-    return allDecks.filter((d) => d.superDecks && d.superDecks.includes(parentId));
+    return allDecks.filter(
+      (d) => d.superDecks && d.superDecks.includes(parentId)
+    );
   };
 
   // Filtered decks for the table
   const filteredDecks = useMemo(() => {
     if (!allDecks) return [];
     if (!searchQuery) return allDecks;
-    return allDecks.filter((d) => 
-      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    return allDecks.filter(
+      (d) =>
+        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        d.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [allDecks, searchQuery]);
 
@@ -68,23 +95,34 @@ export default function HomeView() {
     <>
       <AppHeaderContent>
         <AppBreadcrumbs />
-        <Tooltip
-          label={
-            <>
-              {t("deck.create-deck-tooltip")}
-              <Kbd>n</Kbd>
-            </>
-          }
-          position="left"
-        >
-          <Button
-            onClick={() => setNewDeckModalOpened(true)}
-            leftSection={<IconPlus />}
-            variant="ghost"
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <Tooltip
+            label={
+              <>
+                {t("deck.create-deck-tooltip")}
+                <Kbd>n</Kbd>
+              </>
+            }
+            position="left"
           >
-            {t("deck.new-deck-button")}
+            <Button
+              onClick={() => setNewDeckModalOpened(true)}
+              leftSection={<IconPlus />}
+              variant="ghost"
+            >
+              {t("deck.new-deck-button")}
+            </Button>
+          </Tooltip>
+
+          <Button
+            onClick={handleQuitApp}
+            leftSection={<IconPower size={16} />}
+            variant="ghost"
+            style={{ color: "#ef4444" }}
+          >
+            Quit App
           </Button>
-        </Tooltip>
+        </div>
       </AppHeaderContent>
 
       <div className={`${BASE}__content`}>
@@ -101,8 +139,17 @@ export default function HomeView() {
           </sub>
         </section>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-lg)" }}>
-          <h2 className={`${BASE}__section-title`} style={{ marginBottom: 0 }}>Renal Topics</h2>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "var(--spacing-lg)",
+          }}
+        >
+          <h2 className={`${BASE}__section-title`} style={{ marginBottom: 0 }}>
+            Renal Topics
+          </h2>
         </div>
 
         {isReady && topicDecks.length === 0 ? (
@@ -116,7 +163,9 @@ export default function HomeView() {
           <div className={`${BASE}__topic-grid`}>
             {topicDecks.map((topicDeck) => {
               const subdecks = getSubdecks(topicDeck.id);
-              const hasNew = topicDeck.statCache?.counts?.new !== undefined && topicDeck.statCache.counts.new > 0;
+              const hasNew =
+                topicDeck.statCache?.counts?.new !== undefined &&
+                topicDeck.statCache.counts.new > 0;
               return (
                 <Paper
                   key={topicDeck.id}
@@ -131,7 +180,9 @@ export default function HomeView() {
                   {subdecks.length > 0 ? (
                     <div className={`${BASE}__topic-subdecks`}>
                       {subdecks.map((sub) => {
-                        const subHasNew = sub.statCache?.counts?.new !== undefined && sub.statCache.counts.new > 0;
+                        const subHasNew =
+                          sub.statCache?.counts?.new !== undefined &&
+                          sub.statCache.counts.new > 0;
                         return (
                           <span
                             key={sub.id}
@@ -147,7 +198,12 @@ export default function HomeView() {
                       })}
                     </div>
                   ) : (
-                    <span style={{ fontSize: "var(--font-size-sm)", color: "var(--theme-neutral-500)" }}>
+                    <span
+                      style={{
+                        fontSize: "var(--font-size-sm)",
+                        color: "var(--theme-neutral-500)",
+                      }}
+                    >
                       No subdecks yet
                     </span>
                   )}
@@ -181,7 +237,10 @@ export default function HomeView() {
               {filteredDecks.map((deck) => (
                 <tr key={deck.id}>
                   <td>
-                    <Link to={`/deck/${deck.id}`} className={`${BASE}__table-link`}>
+                    <Link
+                      to={`/deck/${deck.id}`}
+                      className={`${BASE}__table-link`}
+                    >
                       {deck.name}
                     </Link>
                   </td>
@@ -191,7 +250,14 @@ export default function HomeView() {
               ))}
               {filteredDecks.length === 0 && (
                 <tr>
-                  <td colSpan={3} style={{ textAlign: "center", padding: "var(--spacing-xl)", color: "var(--theme-neutral-500)" }}>
+                  <td
+                    colSpan={3}
+                    style={{
+                      textAlign: "center",
+                      padding: "var(--spacing-xl)",
+                      color: "var(--theme-neutral-500)",
+                    }}
+                  >
                     No decks match your search.
                   </td>
                 </tr>

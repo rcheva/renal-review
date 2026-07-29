@@ -1,5 +1,5 @@
 import type ModalProps from "@/components/ModalProps";
-import { Button, Modal, TextInput, Select } from "@/components/ui";
+import { Button, Modal, Select, TextInput } from "@/components/ui";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import type { Deck } from "@/logic/deck/deck";
 import { newDeck } from "@/logic/deck/newDeck";
@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./DeckModal.css";
 import { ColorIdentifier } from "@/lib/ColorIdentifier";
-import DeckColorChooser from "./DeckColorChooser";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
+import DeckColorChooser from "./DeckColorChooser";
 
 const BASE = "deck-modal";
 
@@ -66,7 +66,8 @@ function DeckModal({
 
     try {
       if (mode === "create") {
-        const parent = decks?.find(d => d.id === selectedParentId) || superDeck;
+        const parent =
+          decks?.find((d) => d.id === selectedParentId) || superDeck;
         const id = await newDeck(
           nameValue,
           parent,
@@ -125,7 +126,7 @@ function DeckModal({
           onChange={(e) => setDescriptionValue(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
         />
-        
+
         {mode === "create" && (
           <Select
             label="Parent Deck (Optional)"
@@ -133,7 +134,7 @@ function DeckModal({
             onChange={(val) => setSelectedParentId(val || "")}
             options={[
               { label: "None (Top Level)", value: "" },
-              ...(decks || []).map(d => ({ label: d.name, value: d.id }))
+              ...(decks || []).map((d) => ({ label: d.name, value: d.id })),
             ]}
           />
         )}

@@ -32,12 +32,14 @@ export async function getCardsOf(
     )
   );
   if (ignoreTags && ignoreTags.length > 0) {
-    const noteIds = cards.map(c => c.note);
+    const noteIds = cards.map((c) => c.note);
     const notes = await db.notes.bulkGet(noteIds);
     cards = cards.filter((c, i) => {
       const note = notes[i];
       if (!note || !note.tags) return true;
-      return !note.tags.some(t => ignoreTags.includes(t.toLowerCase().trim()));
+      return !note.tags.some((t) =>
+        ignoreTags.includes(t.toLowerCase().trim())
+      );
     });
   }
 

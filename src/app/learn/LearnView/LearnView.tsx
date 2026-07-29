@@ -92,7 +92,11 @@ function LearnView() {
             </Paper>
             {currentNote?.sourceReference && controller.showingAnswer && (
               <div className={`${BASE}__source-ref`}>
-                <a href={currentNote.sourceReference} target="_blank" rel="noreferrer">
+                <a
+                  href={currentNote.sourceReference}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Source: {currentNote.sourceReference}
                 </a>
               </div>

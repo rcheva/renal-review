@@ -18,13 +18,26 @@ import {
 } from "../shared/QuestionAnswerDisplay";
 
 export const BasicNoteTypeAdapter: NoteTypeAdapter<NoteType.Basic> = {
-  async createNote(params: { front: string; back: string; sourceReference?: string; tags?: string[] }, deck: Deck) {
+  async createNote(
+    params: {
+      front: string;
+      back: string;
+      sourceReference?: string;
+      tags?: string[];
+    },
+    deck: Deck
+  ) {
     return db.transaction("rw", db.notes, db.decks, db.cards, async () => {
-      const noteId = await newNote(deck, {
-        type: NoteType.Basic,
-        front: params.front,
-        back: params.back,
-      }, params.sourceReference, params.tags);
+      const noteId = await newNote(
+        deck,
+        {
+          type: NoteType.Basic,
+          front: params.front,
+          back: params.back,
+        },
+        params.sourceReference,
+        params.tags
+      );
       await newCard(
         {
           ...createCardSkeleton(),
@@ -38,15 +51,25 @@ export const BasicNoteTypeAdapter: NoteTypeAdapter<NoteType.Basic> = {
   },
 
   async updateNote(
-    params: { front: string; back: string; sourceReference?: string; tags?: string[] },
+    params: {
+      front: string;
+      back: string;
+      sourceReference?: string;
+      tags?: string[];
+    },
     existingNote: Note<NoteType.Basic>
   ) {
     return db.transaction("rw", db.notes, db.cards, async () => {
-      await updateNoteContent(existingNote.id, {
-        type: NoteType.Basic,
-        front: params.front,
-        back: params.back,
-      }, params.sourceReference, params.tags);
+      await updateNoteContent(
+        existingNote.id,
+        {
+          type: NoteType.Basic,
+          front: params.front,
+          back: params.back,
+        },
+        params.sourceReference,
+        params.tags
+      );
     });
   },
 

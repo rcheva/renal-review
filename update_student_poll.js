@@ -1,5 +1,5 @@
-const fs = require('fs');
-let content = fs.readFileSync('src/app/polling/StudentPollView.tsx', 'utf8');
+const fs = require("fs");
+let content = fs.readFileSync("src/app/polling/StudentPollView.tsx", "utf8");
 
 content = content.replace(
   'import { IconCheck, IconDownload } from "@tabler/icons-react";',
@@ -16,4 +16,4 @@ content = content.replace(
   '        <div style={{ fontSize: "1.5rem", marginBottom: "2rem", lineHeight: 1.4, fontWeight: "bold" }}>{parse(q.question_text)}</div>'
 );
 
-fs.writeFileSync('src/app/polling/StudentPollView.tsx', content);
+fs.writeFileSync("src/app/polling/StudentPollView.tsx", content);

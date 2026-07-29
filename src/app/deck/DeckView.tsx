@@ -19,10 +19,10 @@ import DeckMenu from "./DeckMenu";
 import "./DeckView.css";
 import { useCardStateCounts } from "@/logic/card/hooks/useCardStateCounts";
 import { useCardsOf } from "@/logic/card/hooks/useCardsOf";
-import DeckHeroSection from "./DeckHeroSection/DeckHeroSection";
-import SubDeckSection from "./SubDeckSection";
-import StudyMaterialsView from "./StudyMaterials/StudyMaterialsView";
 import { Deck } from "@/logic/deck/deck";
+import DeckHeroSection from "./DeckHeroSection/DeckHeroSection";
+import StudyMaterialsView from "./StudyMaterials/StudyMaterialsView";
+import SubDeckSection from "./SubDeckSection";
 
 const BASE = "deck-view";
 

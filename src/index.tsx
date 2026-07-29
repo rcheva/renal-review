@@ -1,17 +1,18 @@
 import App from "@/App";
+import AnythingLLMView from "@/app/ai/AnythingLLMView";
+import NotebookLMView from "@/app/ai/NotebookLMView";
 import DeckView from "@/app/deck/DeckView";
 import NewNotesView from "@/app/editor/NewNotesView";
 import NoteExplorerView from "@/app/explorer/NoteExplorerView";
 import HomeView from "@/app/home/HomeView";
 import ImportView from "@/app/import/ImportView";
 import LearnView from "@/app/learn/LearnView/LearnView";
-import SettingsView from "@/app/settings/SettingsView";
-import StatsView from "@/app/statistics/StatsView";
-import PollingDashboard from "@/app/polling/PollingDashboard";
 import EditPollView from "@/app/polling/EditPollView";
 import LiveResultsView from "@/app/polling/LiveResultsView";
+import PollingDashboard from "@/app/polling/PollingDashboard";
 import StudentPollView from "@/app/polling/StudentPollView";
-import NotebookLMView from "@/app/ai/NotebookLMView";
+import SettingsView from "@/app/settings/SettingsView";
+import StatsView from "@/app/statistics/StatsView";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Navigate, RouterProvider, createHashRouter } from "react-router-dom";
@@ -63,6 +64,10 @@ const router = createHashRouter(
         {
           path: "/ai",
           element: <NotebookLMView />,
+        },
+        {
+          path: "/anything",
+          element: <AnythingLLMView />,
         },
         {
           path: "/stats/:deckId?",

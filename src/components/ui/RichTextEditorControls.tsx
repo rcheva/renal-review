@@ -1,3 +1,5 @@
+import { useNotifications } from "@/components/Notification";
+import { supabase } from "@/logic/supabase";
 import {
   IconBold,
   IconClearFormatting,
@@ -8,17 +10,15 @@ import {
   IconLinkOff,
   IconList,
   IconListNumbers,
+  IconPhoto,
   IconStrikethrough,
   IconSubscript,
   IconSuperscript,
   IconUnderline,
-  IconPhoto,
 } from "@tabler/icons-react";
 import { Editor } from "@tiptap/react";
+import { memo, useCallback, useRef, useState } from "react";
 import { RichTextEditorControl } from "./RichTextEditor";
-import { supabase } from "@/logic/supabase";
-import { useNotifications } from "@/components/Notification";
-import { memo, useCallback, useState, useRef } from "react";
 
 interface ControlProps {
   editor: Editor | null;
@@ -240,35 +240,53 @@ export const MediaUploadControl = memo(function MediaUploadControl({
     if (!file) return;
 
     setUploading(true);
-    showNotification({ title: "Uploading...", message: `Uploading ${file.name}`, type: "info" });
+    showNotification({
+      title: "Uploading...",
+      message: `Uploading ${file.name}`,
+      type: "info",
+    });
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) throw new Error("Must be logged in to upload media.");
+      if (!sessionData?.session)
+        throw new Error("Must be logged in to upload media.");
 
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
       const filePath = `${sessionData.session.user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('renal-review')
+        .from("renal-review")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('renal-review')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("renal-review").getPublicUrl(filePath);
 
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith("image/")) {
         editor?.chain().focus().setImage({ src: publicUrl }).run();
       } else {
-        editor?.chain().focus().setLink({ href: publicUrl }).insertContent(file.name).run();
+        editor
+          ?.chain()
+          .focus()
+          .setLink({ href: publicUrl })
+          .insertContent(file.name)
+          .run();
       }
 
-      showNotification({ title: "Upload Success", message: "Media inserted.", type: "success" });
+      showNotification({
+        title: "Upload Success",
+        message: "Media inserted.",
+        type: "success",
+      });
     } catch (err: any) {
-      showNotification({ title: "Upload Failed", message: err.message, type: "error" });
+      showNotification({
+        title: "Upload Failed",
+        message: err.message,
+        type: "error",
+      });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -277,10 +295,10 @@ export const MediaUploadControl = memo(function MediaUploadControl({
 
   return (
     <>
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        style={{ display: "none" }} 
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
         onChange={handleUpload}
         accept="image/*,video/*,audio/*"
       />

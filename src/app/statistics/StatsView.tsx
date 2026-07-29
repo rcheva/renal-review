@@ -1,22 +1,22 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
-import { AppHeaderContent } from "../shell/Header/Header";
-import { useLiveQuery } from "dexie-react-hooks";
+import { Paper } from "@/components/ui";
 import { db } from "@/logic/db";
-import { useMemo } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Rating, State } from "fsrs.js";
+import { useMemo } from "react";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
 } from "recharts";
-import { Paper } from "@/components/ui";
+import { AppHeaderContent } from "../shell/Header/Header";
 
 function StatsView() {
   const allStats = useLiveQuery(() => db.statistics.toArray());
@@ -112,7 +112,9 @@ function StatsView() {
         </h1>
 
         {chartData.length === 0 ? (
-          <p>No study statistics available yet. Start studying to see data here!</p>
+          <p>
+            No study statistics available yet. Start studying to see data here!
+          </p>
         ) : (
           <>
             <div
@@ -124,7 +126,12 @@ function StatsView() {
               }}
             >
               <Paper withBorder style={{ padding: "1.5rem" }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--theme-neutral-500)",
+                  }}
+                >
                   Total Cards Studied
                 </div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold" }}>
@@ -132,7 +139,12 @@ function StatsView() {
                 </div>
               </Paper>
               <Paper withBorder style={{ padding: "1.5rem" }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--theme-neutral-500)",
+                  }}
+                >
                   Total Study Time
                 </div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold" }}>
@@ -140,7 +152,12 @@ function StatsView() {
                 </div>
               </Paper>
               <Paper withBorder style={{ padding: "1.5rem" }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--theme-neutral-500)",
+                  }}
+                >
                   Average Retention
                 </div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold" }}>
@@ -160,10 +177,30 @@ function StatsView() {
                   <YAxis />
                   <RechartsTooltip />
                   <Legend />
-                  <Bar dataKey="totalNew" stackId="a" name="New" fill="#3b82f6" />
-                  <Bar dataKey="totalLearning" stackId="a" name="Learning" fill="#f59e0b" />
-                  <Bar dataKey="totalReview" stackId="a" name="Review" fill="#10b981" />
-                  <Bar dataKey="totalRelearning" stackId="a" name="Relearning" fill="#ef4444" />
+                  <Bar
+                    dataKey="totalNew"
+                    stackId="a"
+                    name="New"
+                    fill="#3b82f6"
+                  />
+                  <Bar
+                    dataKey="totalLearning"
+                    stackId="a"
+                    name="Learning"
+                    fill="#f59e0b"
+                  />
+                  <Bar
+                    dataKey="totalReview"
+                    stackId="a"
+                    name="Review"
+                    fill="#10b981"
+                  />
+                  <Bar
+                    dataKey="totalRelearning"
+                    stackId="a"
+                    name="Relearning"
+                    fill="#ef4444"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </Paper>
@@ -189,7 +226,7 @@ function StatsView() {
                 </LineChart>
               </ResponsiveContainer>
             </Paper>
-            
+
             <h2 style={{ fontFamily: "var(--font-serif)", marginTop: "2rem" }}>
               Study Time (Minutes)
             </h2>

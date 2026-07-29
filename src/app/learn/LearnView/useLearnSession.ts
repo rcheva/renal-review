@@ -4,9 +4,9 @@ import { getCardsOf } from "@/logic/card/getCardsOf";
 import { CognitivePrompt } from "@/logic/cognitivePrompts";
 import { Deck } from "@/logic/deck/deck";
 import { useLearning } from "@/logic/learn";
+import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { Rating } from "fsrs.js";
 import { useCallback, useState } from "react";
-import { useSetting } from "@/logic/settings/hooks/useSetting";
 
 interface UseLearnSessionOptions {
   deck: Deck | undefined;
@@ -19,8 +19,12 @@ export function useLearnSession({
   learnAll,
   newToReviewRatio,
 }: UseLearnSessionOptions) {
-    const [ignoreTagsStr] = useSetting("#learn_ignoreTags");
-  const ignoreTags = ignoreTagsStr?.split(",").map(t => t.trim()).filter(Boolean) ?? [];
+  const [ignoreTagsStr] = useSetting("#learn_ignoreTags");
+  const ignoreTags =
+    ignoreTagsStr
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean) ?? [];
 
   const controller = useLearning(
     {

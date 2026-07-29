@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 async function main() {
   const transport = new StdioClientTransport({
@@ -14,11 +14,11 @@ async function main() {
 
   await mcpClient.connect(transport);
   const result = await mcpClient.callTool({
-      name: "notebook_list",
-      arguments: { max_results: 100 }
+    name: "notebook_list",
+    arguments: { max_results: 100 },
   });
   console.log("Raw Result Content:", result.content[0].text);
-  
+
   process.exit(0);
 }
 

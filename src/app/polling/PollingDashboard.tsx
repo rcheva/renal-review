@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/logic/supabase";
-import { Poll } from "./types";
-import { Button, Paper, Modal, TextInput } from "@/components/ui";
-import { AppHeaderContent } from "../shell/Header/Header";
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
+import { Button, Modal, Paper, TextInput } from "@/components/ui";
+import { supabase } from "@/logic/supabase";
+import { IconChartBar, IconPlus, IconTrash } from "@tabler/icons-react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconPlus, IconChartBar, IconTrash } from "@tabler/icons-react";
+import { AppHeaderContent } from "../shell/Header/Header";
+import { Poll } from "./types";
 
 export default function PollingDashboard() {
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -73,9 +73,21 @@ export default function PollingDashboard() {
           padding: "20px 0",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-          <h1 style={{ fontFamily: "var(--font-serif)" }}>Live Polling Dashboard</h1>
-          <Button onClick={() => setIsCreateModalOpen(true)} leftSection={<IconPlus size={16} />}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "2rem",
+          }}
+        >
+          <h1 style={{ fontFamily: "var(--font-serif)" }}>
+            Live Polling Dashboard
+          </h1>
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            leftSection={<IconPlus size={16} />}
+          >
             New Poll
           </Button>
         </div>
@@ -83,29 +95,86 @@ export default function PollingDashboard() {
         {loading ? (
           <p>Loading polls...</p>
         ) : polls.length === 0 ? (
-          <Paper withBorder style={{ padding: "2rem", textAlign: "center", color: "var(--theme-neutral-500)" }}>
-            <p>No polls created yet. Create your first poll to engage your students!</p>
+          <Paper
+            withBorder
+            style={{
+              padding: "2rem",
+              textAlign: "center",
+              color: "var(--theme-neutral-500)",
+            }}
+          >
+            <p>
+              No polls created yet. Create your first poll to engage your
+              students!
+            </p>
           </Paper>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
             {polls.map((poll) => (
-              <Paper key={poll.id} withBorder style={{ padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Paper
+                key={poll.id}
+                withBorder
+                style={{
+                  padding: "1.5rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <div>
-                  <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.25rem" }}>{poll.title}</h3>
-                  <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "var(--theme-neutral-500)" }}>
-                    <span>Status: <strong style={{ color: poll.status === "active" ? "var(--theme-primary-600)" : "inherit" }}>{poll.status.toUpperCase()}</strong></span>
-                    <span>Created: {new Date(poll.created_at).toLocaleDateString()}</span>
-                    <span>Questions: {(poll as any).questions?.[0]?.count || 0}</span>
+                  <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.25rem" }}>
+                    {poll.title}
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "1rem",
+                      fontSize: "0.875rem",
+                      color: "var(--theme-neutral-500)",
+                    }}
+                  >
+                    <span>
+                      Status:{" "}
+                      <strong
+                        style={{
+                          color:
+                            poll.status === "active"
+                              ? "var(--theme-primary-600)"
+                              : "inherit",
+                        }}
+                      >
+                        {poll.status.toUpperCase()}
+                      </strong>
+                    </span>
+                    <span>
+                      Created: {new Date(poll.created_at).toLocaleDateString()}
+                    </span>
+                    <span>
+                      Questions: {(poll as any).questions?.[0]?.count || 0}
+                    </span>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <Button variant="subtle" onClick={() => navigate(`/polling/edit/${poll.id}`)}>
+                  <Button
+                    variant="subtle"
+                    onClick={() => navigate(`/polling/edit/${poll.id}`)}
+                  >
                     Edit
                   </Button>
-                  <Button variant="default" onClick={() => navigate(`/polling/live/${poll.id}`)} leftSection={<IconChartBar size={16} />}>
+                  <Button
+                    variant="default"
+                    onClick={() => navigate(`/polling/live/${poll.id}`)}
+                    leftSection={<IconChartBar size={16} />}
+                  >
                     Live View
                   </Button>
-                  <Button variant="subtle" onClick={() => handleDeletePoll(poll.id)} style={{ color: "var(--theme-red-600)" }}>
+                  <Button
+                    variant="subtle"
+                    onClick={() => handleDeletePoll(poll.id)}
+                    style={{ color: "var(--theme-red-600)" }}
+                  >
                     <IconTrash size={16} />
                   </Button>
                 </div>
@@ -119,7 +188,9 @@ export default function PollingDashboard() {
           onClose={() => setIsCreateModalOpen(false)}
           title="Create New Poll"
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
             <TextInput
               label="Poll Title"
               placeholder="e.g. Acute Kidney Injury Basics"
@@ -127,9 +198,25 @@ export default function PollingDashboard() {
               onChange={(e) => setNewPollTitle(e.target.value)}
               autoFocus
             />
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-              <Button variant="subtle" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreatePoll} disabled={!newPollTitle.trim()}>Create</Button>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem",
+              }}
+            >
+              <Button
+                variant="subtle"
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreatePoll}
+                disabled={!newPollTitle.trim()}
+              >
+                Create
+              </Button>
             </div>
           </div>
         </Modal>
