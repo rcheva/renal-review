@@ -1,6 +1,6 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
 import EmptyNotice from "@/components/EmptyNotice";
-import { Button, Kbd, Modal, Paper, TextInput, Tooltip } from "@/components/ui";
+import { Button, IconButton, Kbd, Modal, Paper, TextInput, Tooltip } from "@/components/ui";
 import { useDocumentTitle } from "@/lib/hooks/useDocumentTitle";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
@@ -16,7 +16,6 @@ import {
   IconPower,
   IconRefresh,
   IconSearch,
-  IconCloudUpload,
   IconDatabaseExport,
   IconTerminal,
   IconCopy,
@@ -110,37 +109,32 @@ export default function HomeView() {
       <AppHeaderContent>
         <AppBreadcrumbs />
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <Button
-            onClick={() => window.location.reload()}
-            leftSection={<IconRefresh size={16} />}
-            variant="default"
-          >
-            Refresh App
-          </Button>
+          <Tooltip label="Refresh App">
+            <IconButton
+              onClick={() => window.location.reload()}
+              variant="default"
+            >
+              <IconRefresh size={18} />
+            </IconButton>
+          </Tooltip>
 
-          <Button
-            onClick={() => setIsBackupModalOpen(true)}
-            leftSection={<IconCloudUpload size={16} />}
-            variant="default"
-          >
-            Sync / Transfer Decks
-          </Button>
+          <Tooltip label="Import Flashcards (JSON)">
+            <IconButton
+              onClick={() => setIsImportFlashcardsModalOpen(true)}
+              variant="default"
+            >
+              <IconFileImport size={18} />
+            </IconButton>
+          </Tooltip>
 
-          <Button
-            onClick={() => setIsImportFlashcardsModalOpen(true)}
-            leftSection={<IconFileImport size={16} />}
-            variant="default"
-          >
-            Import Flashcards (JSON)
-          </Button>
-
-          <Button
-            onClick={() => setIsLogsModalOpen(true)}
-            leftSection={<IconTerminal size={16} />}
-            variant="default"
-          >
-            View Sync Logs
-          </Button>
+          <Tooltip label="View Sync Logs">
+            <IconButton
+              onClick={() => setIsLogsModalOpen(true)}
+              variant="default"
+            >
+              <IconTerminal size={18} />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip
             label={
@@ -160,14 +154,15 @@ export default function HomeView() {
             </Button>
           </Tooltip>
 
-          <Button
-            onClick={handleQuitApp}
-            leftSection={<IconPower size={16} />}
-            variant="ghost"
-            style={{ color: "#ef4444" }}
-          >
-            Quit App
-          </Button>
+          <Tooltip label="Quit App">
+            <IconButton
+              onClick={handleQuitApp}
+              variant="ghost"
+              style={{ color: "#ef4444" }}
+            >
+              <IconPower size={18} />
+            </IconButton>
+          </Tooltip>
         </div>
       </AppHeaderContent>
 
