@@ -521,6 +521,8 @@ export default function StudentPollView() {
   }
 
   const q = questions[currentQuestionIndex];
+  const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const optionLetters = ["A", "B", "C", "D", "E", "F", "G"];
 
   return (
     <div
@@ -533,93 +535,104 @@ export default function StudentPollView() {
         padding: "1rem",
       }}
     >
-      <style>{`
-        .poll-option-button {
-          padding: 1rem 1.5rem;
-          border-radius: 8px;
-          border: 2px solid var(--theme-neutral-200);
-          background-color: var(--theme-card-bg);
-          color: var(--theme-neutral-900);
-          text-align: left;
-          font-size: 1.125rem;
-          transition: all 0.2s ease;
-          width: 100%;
-          cursor: pointer;
-        }
-        @media (hover: hover) {
-          .poll-option-button:hover:not(:disabled) {
-            border-color: var(--theme-blue-400);
-            background-color: var(--theme-blue-50);
-            color: var(--theme-blue-900);
-          }
-        }
-        .poll-option-button:disabled {
-          cursor: default;
-        }
-      `}</style>
       <Paper
         key={q.id}
         withBorder
         style={{
           width: "100%",
-          maxWidth: 600,
+          maxWidth: 640,
           padding: "2rem",
+          borderRadius: "16px",
           display: "flex",
           flexDirection: "column",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)",
         }}
       >
-        <div
-          style={{
-            fontSize: "0.875rem",
-            color: "var(--theme-neutral-500)",
-            marginBottom: "1.5rem",
-            fontWeight: "bold",
-          }}
-        >
-          Question {currentQuestionIndex + 1} of {questions.length}
+        {/* Progress Header */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "0.85rem", fontWeight: 700, color: "#2563eb" }}>
+            <span>QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
+            <span style={{ color: "#64748b" }}>{activeStudent?.name} ({activeStudent?.group_name || "Renal"})</span>
+          </div>
+          <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${progressPercent}%`,
+                background: "linear-gradient(90deg, #2563eb 0%, #06b6d4 100%)",
+                borderRadius: "3px",
+                transition: "width 0.3s ease",
+              }}
+            />
+          </div>
         </div>
 
+        {/* Question Text */}
         <div
           style={{
-            fontSize: "1.5rem",
+            fontSize: "1.35rem",
             marginBottom: "2rem",
-            lineHeight: 1.4,
-            fontWeight: "bold",
+            lineHeight: 1.45,
+            fontWeight: 700,
+            color: "#0f172a",
           }}
         >
           {parse(q.question_text)}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {shuffledIndices.map((originalIndex) => {
+        {/* Shuffled Options List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+          {shuffledIndices.map((originalIndex, optIdx) => {
             const opt = q.options[originalIndex];
+            const letter = optionLetters[optIdx] || String(optIdx + 1);
+
             return (
               <button
                 key={`${q.id}-${originalIndex}`}
                 onClick={() => handleOptionClick(originalIndex)}
-                className="poll-option-button"
+                className="option-button-modern"
                 disabled={hasSubmitted}
               >
-                {opt}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      background: "rgba(37, 99, 235, 0.1)",
+                      color: "#2563eb",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: "0.9rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {letter}
+                  </span>
+                  <span>{opt}</span>
+                </div>
               </button>
             );
           })}
         </div>
 
+        {/* Skip Button */}
         <div
           style={{
-            marginTop: "2rem",
+            marginTop: "1.75rem",
             display: "flex",
             justifyContent: "center",
           }}
         >
           <Button
-            variant="ghost"
+            variant="subtle"
             onClick={() => handleOptionClick(-1)}
             disabled={hasSubmitted}
-            style={{ color: "var(--theme-neutral-500)" }}
+            style={{ color: "#64748b" }}
           >
-            Leave Blank / Skip
+            Leave Blank / Skip Question
           </Button>
         </div>
       </Paper>

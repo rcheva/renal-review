@@ -1,18 +1,25 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
-import { Paper } from "@/components/ui";
-import { Button, TextInput } from "@/components/ui";
+import { Paper, Button, TextInput } from "@/components/ui";
 import { supabase } from "@/logic/supabase";
 import {
   IconBrandWhatsapp,
   IconChartBar,
   IconCopy,
-  IconDownload,
   IconRefresh,
   IconTrophy,
+  IconPlayerPlay,
+  IconPlayerPause,
+  IconRotate,
+  IconClock,
+  IconEye,
+  IconEyeOff,
+  IconMoon,
+  IconSun,
+  IconCheck,
 } from "@tabler/icons-react";
 import parse from "html-react-parser";
 import { QRCodeSVG } from "qrcode.react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
   Bar,
@@ -27,15 +34,25 @@ import {
 } from "recharts";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, Question, Response } from "./types";
+import "./PollingGlassmorphism.css";
 
 export default function LiveResultsView() {
   const { pollId } = useParams();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [responses, setResponses] = useState<Response[]>([]);
-  const [activeTab, setActiveTab] = useState<"charts" | "leaderboard">(
-    "charts"
-  );
+  const [activeTab, setActiveTab] = useState<"charts" | "leaderboard">("charts");
+
+  // Modern UI & Timer States
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [hideLiveVotes, setHideLiveVotes] = useState(false);
+  const [revealRationaleMap, setRevealRationaleMap] = useState<Record<string, boolean>>({});
+
+  // Countdown Timer State
+  const [timerDuration, setTimerDuration] = useState<number>(60);
+  const [timeLeft, setTimeLeft] = useState<number>(60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (pollId) {
@@ -58,6 +75,36 @@ export default function LiveResultsView() {
       };
     }
   }, [pollId]);
+
+  // Countdown Timer Logic
+  useEffect(() => {
+    if (isTimerRunning && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setIsTimerRunning(false);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isTimerRunning, timeLeft]);
+
+  const startTimer = (secs?: number) => {
+    const duration = secs || timerDuration;
+    setTimerDuration(duration);
+    setTimeLeft(duration);
+    setIsTimerRunning(true);
+  };
+
+  const pauseTimer = () => setIsTimerRunning(false);
+  const resumeTimer = () => {
+    if (timeLeft > 0) setIsTimerRunning(true);
+  };
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimeLeft(timerDuration);
+  };
 
   const fetchData = async () => {
     const { data: pollData } = await supabase
@@ -87,10 +134,7 @@ export default function LiveResultsView() {
   const togglePollStatus = async () => {
     if (!poll) return;
     const newStatus = poll.status === "active" ? "closed" : "active";
-    await supabase
-      .from("polls")
-      .update({ status: newStatus })
-      .eq("id", poll.id);
+    await supabase.from("polls").update({ status: newStatus }).eq("id", poll.id);
     setPoll({ ...poll, status: newStatus });
   };
 
@@ -107,23 +151,28 @@ export default function LiveResultsView() {
     }
   };
 
-  if (!poll) return <p>Loading live results...</p>;
+  const toggleRevealRationale = (qId: string) => {
+    setRevealRationaleMap((prev) => ({ ...prev, [qId]: !prev[qId] }));
+  };
+
+  if (!poll) return <p style={{ padding: "2rem" }}>Loading presenter live results...</p>;
 
   const origin =
-    window.location.origin.includes("tauri://") ||
-    window.location.origin.includes("file://")
+    window.location.origin.includes("tauri://") || window.location.origin.includes("file://")
       ? "https://rcheva.github.io/renal-review"
       : window.location.origin;
   const pollUrl = `${origin}/#/poll/${poll.id}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Join my live poll: ${poll.title}\n\n${pollUrl}`)}`;
 
+  const timerPercent = (timeLeft / timerDuration) * 100;
+
   return (
-    <>
+    <div className={isDarkMode ? "dark-presenter-mode" : ""}>
       <AppHeaderContent>
         <AppBreadcrumbs
           segments={[
             { label: "Live Polling", path: "/polling" },
-            { label: `${poll.title} - Live Results` },
+            { label: `${poll.title} - Presenter View` },
           ]}
         />
       </AppHeaderContent>
@@ -133,223 +182,417 @@ export default function LiveResultsView() {
           width: "100%",
           maxWidth: "var(--max-content-width)",
           margin: "0 auto",
-          padding: "20px 0",
+          padding: "20px 1rem",
         }}
       >
+        {/* Header Bar */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "2rem",
+            marginBottom: "1.5rem",
+            flexWrap: "wrap",
+            gap: "1rem",
           }}
         >
-          <h1 style={{ fontFamily: "var(--font-serif)", margin: 0 }}>
-            Live Results: {poll.title}
-          </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h1 style={{ fontFamily: "var(--font-serif)", margin: 0, fontSize: "1.8rem" }}>
+                {poll.title}
+              </h1>
+              <span
+                className="pulse-badge"
+                style={{
+                  background: poll.status === "active" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                  color: poll.status === "active" ? "#10b981" : "#ef4444",
+                }}
+              >
+                {poll.status === "active" && <span className="pulse-dot" />}
+                {poll.status === "active" ? "LIVE VOTING OPEN" : "POLL CLOSED"}
+              </span>
+            </div>
+            <p style={{ margin: "4px 0 0 0", color: isDarkMode ? "#94a3b8" : "#64748b", fontSize: "0.9rem" }}>
+              Category: <strong>{poll.group_name || "Renal"}</strong> • Total Responses: <strong>{responses.length}</strong>
+            </p>
+          </div>
+
+          {/* Action Toolbar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              variant="default"
+              leftSection={isDarkMode ? <IconSun size={18} color="#f59e0b" /> : <IconMoon size={18} />}
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
+              {isDarkMode ? "Light Mode" : "Dark Presentation Mode"}
+            </Button>
+
             <Button
               variant="default"
               leftSection={<IconRefresh size={16} />}
               onClick={handleResetResults}
             >
-              Reset Results
+              Reset Responses
             </Button>
-            <div
-              style={{
-                padding: "0.5rem 1rem",
-                borderRadius: "100px",
-                backgroundColor:
-                  poll.status === "active"
-                    ? "var(--theme-primary-100)"
-                    : "var(--theme-red-100)",
-                color:
-                  poll.status === "active"
-                    ? "var(--theme-primary-800)"
-                    : "var(--theme-red-800)",
-                fontWeight: "bold",
-              }}
-            >
-              {poll.status === "active"
-                ? "LIVE - Accepting Responses"
-                : "CLOSED"}
-            </div>
+
             <Button
               onClick={togglePollStatus}
               style={{
-                backgroundColor:
-                  poll.status === "active"
-                    ? "var(--theme-red-600)"
-                    : "var(--theme-primary-600)",
+                backgroundColor: poll.status === "active" ? "#dc2626" : "#16a34a",
                 color: "white",
-                border: "none",
                 fontWeight: "bold",
-                padding: "0.5rem 1rem",
-                borderRadius: "4px",
-                cursor: "pointer",
               }}
             >
-              {poll.status === "active" ? "Close Poll" : "Open Poll"}
+              {poll.status === "active" ? "Close Voting" : "Open Voting"}
             </Button>
           </div>
         </div>
 
+        {/* Presenter Countdown Timer Card */}
         <Paper
           withBorder
+          className={isDarkMode ? "glass-card" : ""}
           style={{
-            padding: "1.5rem",
-            marginBottom: "2rem",
-            display: "flex",
-            gap: "2rem",
-            alignItems: "center",
+            padding: "1.25rem",
+            marginBottom: "1.5rem",
+            borderRadius: "12px",
+            background: isDarkMode ? "var(--poll-glass-bg)" : "white",
           }}
         >
-          <div>
-            <QRCodeSVG value={pollUrl} size={100} level="M" />
-          </div>
           <div
             style={{
-              flex: 1,
               display: "flex",
-              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "1rem",
+              flexWrap: "wrap",
               gap: "1rem",
             }}
           >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <IconClock size={24} color={timeLeft <= 10 ? "#ef4444" : "#06b6d4"} />
+              <div>
+                <span style={{ fontSize: "0.8rem", color: isDarkMode ? "#94a3b8" : "#64748b", fontWeight: 600 }}>
+                  PRESENTER QUESTION TIMER
+                </span>
+                <div
+                  style={{
+                    fontSize: "1.6rem",
+                    fontWeight: 800,
+                    fontFamily: "monospace",
+                    color: timeLeft <= 10 ? "#ef4444" : isDarkMode ? "#f8fafc" : "#0f172a",
+                  }}
+                >
+                  {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+                </div>
+              </div>
+            </div>
+
+            {/* Timer Presets */}
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <span style={{ fontSize: "0.8rem", color: isDarkMode ? "#94a3b8" : "#64748b" }}>Presets:</span>
+              {[30, 60, 90, 120].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => startTimer(s)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border, #cbd5e1)",
+                    background: timerDuration === s ? "#2563eb" : "transparent",
+                    color: timerDuration === s ? "white" : isDarkMode ? "#e2e8f0" : "#1e293b",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {s}s
+                </button>
+              ))}
+            </div>
+
+            {/* Timer Control Buttons */}
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              {isTimerRunning ? (
+                <Button variant="default" onClick={pauseTimer} leftSection={<IconPlayerPause size={16} />}>
+                  Pause
+                </Button>
+              ) : (
+                <Button variant="default" onClick={resumeTimer} leftSection={<IconPlayerPlay size={16} />}>
+                  {timeLeft === timerDuration ? "Start" : "Resume"}
+                </Button>
+              )}
+              <Button variant="subtle" onClick={resetTimer} leftSection={<IconRotate size={16} />}>
+                Reset
+              </Button>
+            </div>
+          </div>
+
+          {/* Animated Progress Bar */}
+          <div className="timer-bar-container">
             <div
-              style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-            >
+              className={`timer-bar-fill ${timeLeft <= 10 ? "warning" : ""}`}
+              style={{ width: `${Math.max(0, timerPercent)}%` }}
+            />
+          </div>
+        </Paper>
+
+        {/* Student Connection & Share Link */}
+        <Paper
+          withBorder
+          className={isDarkMode ? "glass-card" : ""}
+          style={{
+            padding: "1.25rem",
+            marginBottom: "1.5rem",
+            display: "flex",
+            gap: "1.5rem",
+            alignItems: "center",
+            borderRadius: "12px",
+            background: isDarkMode ? "var(--poll-glass-bg)" : "white",
+          }}
+        >
+          <div style={{ background: "white", padding: "6px", borderRadius: "8px" }}>
+            <QRCodeSVG value={pollUrl} size={90} level="M" />
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+              Student Poll Access URL & QR Code:
+            </span>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               <TextInput value={pollUrl} readOnly style={{ flex: 1 }} />
               <Button
                 variant="default"
                 leftSection={<IconCopy size={16} />}
                 onClick={() => navigator.clipboard.writeText(pollUrl)}
               >
-                Copy
+                Copy URL
               </Button>
               <Button
                 variant="default"
                 leftSection={<IconBrandWhatsapp size={16} color="#25D366" />}
                 onClick={() => window.open(whatsappUrl, "_blank")}
               >
-                Share
+                Share WhatsApp
               </Button>
             </div>
           </div>
         </Paper>
 
-        <p style={{ marginBottom: "2rem", color: "var(--theme-neutral-500)" }}>
-          Total responses recorded: {responses.length}
-        </p>
-
+        {/* View Toggle Tabs */}
         <div
           style={{
             display: "flex",
-            gap: "1rem",
-            marginBottom: "2rem",
-            borderBottom: "1px solid var(--theme-neutral-200)",
-            paddingBottom: "1rem",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.5rem",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.2)",
+            paddingBottom: "0.75rem",
           }}
         >
-          <Button
-            variant={activeTab === "charts" ? "primary" : "default"}
-            leftSection={<IconChartBar size={16} />}
-            onClick={() => setActiveTab("charts")}
-          >
-            Charts
-          </Button>
-          <Button
-            variant={activeTab === "leaderboard" ? "primary" : "default"}
-            leftSection={<IconTrophy size={16} />}
-            onClick={() => setActiveTab("leaderboard")}
-          >
-            Leaderboard
-          </Button>
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <Button
+              variant={activeTab === "charts" ? "primary" : "default"}
+              leftSection={<IconChartBar size={16} />}
+              onClick={() => setActiveTab("charts")}
+            >
+              Live Charts
+            </Button>
+            <Button
+              variant={activeTab === "leaderboard" ? "primary" : "default"}
+              leftSection={<IconTrophy size={16} />}
+              onClick={() => setActiveTab("leaderboard")}
+            >
+              Participant Leaderboard
+            </Button>
+          </div>
+
+          {activeTab === "charts" && (
+            <Button
+              variant="subtle"
+              leftSection={hideLiveVotes ? <IconEye size={16} /> : <IconEyeOff size={16} />}
+              onClick={() => setHideLiveVotes(!hideLiveVotes)}
+            >
+              {hideLiveVotes ? "Show Live Votes" : "Hide Votes Until Revealed"}
+            </Button>
+          )}
         </div>
 
+        {/* Charts View */}
         {activeTab === "charts" && (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "3rem" }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
             {questions.map((q, i) => {
-              const qResponses = responses.filter(
-                (r) => r.question_id === q.id
-              );
-              const data = q.options.map((opt, optIndex) => ({
-                name: `Option ${optIndex + 1}`,
-                text: opt,
-                count: qResponses.filter(
-                  (r) => r.selected_option_index === optIndex
-                ).length,
-                isCorrect: q.correct_option_index === optIndex,
-              }));
+              const qResponses = responses.filter((r) => r.question_id === q.id);
+              const isRationaleRevealed = revealRationaleMap[q.id];
+
+              const data = q.options.map((opt, optIndex) => {
+                const count = qResponses.filter((r) => r.selected_option_index === optIndex).length;
+                const percentage = qResponses.length > 0 ? Math.round((count / qResponses.length) * 100) : 0;
+                return {
+                  name: `Option ${optIndex + 1}`,
+                  text: opt,
+                  count: hideLiveVotes && !isRationaleRevealed ? 0 : count,
+                  percentage,
+                  isCorrect: q.correct_option_index === optIndex,
+                };
+              });
 
               return (
-                <Paper key={q.id} withBorder style={{ padding: "1.5rem" }}>
-                  <div
-                    style={{
-                      marginTop: 0,
-                      marginBottom: "0.5rem",
-                      fontSize: "1.125rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {i + 1}. {parse(q.question_text)}
-                  </div>
+                <Paper
+                  key={q.id}
+                  withBorder
+                  className={isDarkMode ? "glass-card" : ""}
+                  style={{
+                    padding: "1.5rem",
+                    borderRadius: "12px",
+                    background: isDarkMode ? "var(--poll-glass-bg)" : "white",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
-                      flexWrap: "wrap",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: "1rem",
                       gap: "1rem",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: "0.8rem", color: isDarkMode ? "#38bdf8" : "#2563eb", fontWeight: 700 }}>
+                        QUESTION {i + 1} OF {questions.length}
+                      </span>
+                      <h3 style={{ margin: "4px 0 0 0", fontSize: "1.25rem", color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                        {parse(q.question_text)}
+                      </h3>
+                    </div>
+
+                    <Button
+                      variant={isRationaleRevealed ? "primary" : "default"}
+                      onClick={() => toggleRevealRationale(q.id)}
+                      leftSection={isRationaleRevealed ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                    >
+                      {isRationaleRevealed ? "Hide Answer & Rationale" : "Reveal Answer & Rationale"}
+                    </Button>
+                  </div>
+
+                  {/* Option List Grid */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                      gap: "0.75rem",
                       marginBottom: "1.5rem",
                     }}
                   >
-                    {q.options.map((opt, optIndex) => (
-                      <div
-                        key={optIndex}
-                        style={{
-                          fontSize: "0.875rem",
-                          padding: "0.25rem 0.5rem",
-                          backgroundColor: "var(--theme-neutral-100)",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        <strong>Option {optIndex + 1}:</strong> {opt}
-                      </div>
-                    ))}
+                    {q.options.map((opt, optIndex) => {
+                      const isCorrect = isRationaleRevealed && q.correct_option_index === optIndex;
+                      return (
+                        <div
+                          key={optIndex}
+                          style={{
+                            padding: "0.75rem 1rem",
+                            borderRadius: "8px",
+                            border: isCorrect
+                              ? "2px solid #10b981"
+                              : isDarkMode
+                              ? "1px solid rgba(255, 255, 255, 0.1)"
+                              : "1px solid #e2e8f0",
+                            background: isCorrect
+                              ? "rgba(16, 185, 129, 0.15)"
+                              : isDarkMode
+                              ? "rgba(30, 41, 59, 0.5)"
+                              : "#f8fafc",
+                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                            fontSize: "0.9rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: isCorrect ? "#10b981" : isDarkMode ? "#38bdf8" : "#2563eb" }}>
+                              Option {optIndex + 1}:
+                            </strong>{" "}
+                            {opt}
+                          </div>
+                          {isCorrect && <IconCheck size={18} color="#10b981" />}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div style={{ height: 300 }}>
+
+                  {/* Bar Chart Container */}
+                  <div style={{ height: 260, width: "100%" }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis allowDecimals={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
+                        <XAxis dataKey="name" stroke={isDarkMode ? "#94a3b8" : "#64748b"} />
+                        <YAxis allowDecimals={false} stroke={isDarkMode ? "#94a3b8" : "#64748b"} />
                         <RechartsTooltip
+                          contentStyle={{
+                            background: isDarkMode ? "#0f172a" : "#ffffff",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                            color: isDarkMode ? "#f8fafc" : "#0f172a",
+                            borderRadius: "8px",
+                          }}
                           formatter={(value, name, props) => [
-                            value,
+                            `${value} votes (${props.payload.percentage}%)`,
                             props.payload.text,
                           ]}
                         />
-                        <Bar dataKey="count" name="Votes">
-                          <LabelList dataKey="count" position="top" />
+                        <Bar dataKey="count" name="Votes" radius={[6, 6, 0, 0]}>
+                          <LabelList
+                            dataKey="count"
+                            position="top"
+                            fill={isDarkMode ? "#f8fafc" : "#0f172a"}
+                            formatter={(v: any) => (Number(v) > 0 ? `${v} (${data.find(d => d.count === Number(v))?.percentage || 0}%)` : "")}
+                          />
                           {data.map((entry, index) => (
                             <Cell
                               key={`cell-${index}`}
-                              fill={entry.isCorrect ? "#10b981" : "#ef4444"}
+                              fill={
+                                isRationaleRevealed
+                                  ? entry.isCorrect
+                                    ? "#10b981"
+                                    : "#ef4444"
+                                  : isDarkMode
+                                  ? "#06b6d4"
+                                  : "#2563eb"
+                              }
                             />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+
+                  {/* Medical Rationale Box */}
+                  {isRationaleRevealed && q.explanation && (
+                    <div
+                      style={{
+                        marginTop: "1.25rem",
+                        padding: "1rem 1.25rem",
+                        borderRadius: "8px",
+                        background: isDarkMode ? "rgba(6, 182, 212, 0.1)" : "rgba(37, 99, 235, 0.08)",
+                        borderLeft: "4px solid #06b6d4",
+                        color: isDarkMode ? "#e0f2fe" : "#1e3a8a",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      <strong style={{ color: "#06b6d4", display: "block", marginBottom: "4px" }}>
+                        Medical Rationale & Clinical Rationale:
+                      </strong>
+                      {q.explanation}
+                    </div>
+                  )}
                 </Paper>
               );
             })}
           </div>
         )}
 
+        {/* Participant Leaderboard View */}
         {activeTab === "leaderboard" &&
           (() => {
-            // Calculate Leaderboard
             const participantMap = new Map<
               string,
               {
@@ -357,7 +600,6 @@ export default function LiveResultsView() {
                 hospital: string;
                 score: number;
                 totalAnswered: number;
-                correctAnswers: string[];
               }
             >();
 
@@ -369,127 +611,63 @@ export default function LiveResultsView() {
                   hospital: r.hospital || "Unknown",
                   score: 0,
                   totalAnswered: 0,
-                  correctAnswers: [],
                 });
               }
 
               const p = participantMap.get(key)!;
-              const q = questions.find(
-                (question) => question.id === r.question_id
-              );
+              const q = questions.find((question) => question.id === r.question_id);
 
               if (q) {
                 p.totalAnswered++;
                 if (r.selected_option_index === q.correct_option_index) {
                   p.score++;
-                  p.correctAnswers.push(q.question_text);
                 }
               }
             });
 
-            const leaderboard = Array.from(participantMap.values()).sort(
-              (a, b) => b.score - a.score
-            );
-
-            const exportCsv = async () => {
-              if (leaderboard.length === 0) return;
-              const header = "Name,Hospital,Score,Total Answered\n";
-              const rows = leaderboard
-                .map(
-                  (p) =>
-                    `"${p.name}","${p.hospital}",${p.score},${p.totalAnswered}`
-                )
-                .join("\n");
-              const csvContent = header + rows;
-
-              try {
-                const isTauri =
-                  window.location.origin.includes("tauri://") ||
-                  window.location.origin.includes("file://") ||
-                  (window as any).__TAURI_INTERNALS__;
-
-                if (isTauri) {
-                  const { save } = await import("@tauri-apps/plugin-dialog");
-                  const { writeTextFile } = await import(
-                    "@tauri-apps/plugin-fs"
-                  );
-
-                  const filePath = await save({
-                    filters: [{ name: "CSV File", extensions: ["csv"] }],
-                    defaultPath: `${poll.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_results.csv`,
-                  });
-
-                  if (filePath) {
-                    await writeTextFile(filePath, csvContent);
-                  }
-                } else {
-                  const blob = new Blob([csvContent], {
-                    type: "text/csv;charset=utf-8;",
-                  });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `${poll.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_results.csv`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }
-              } catch (err) {
-                console.error("Error saving CSV:", err);
-                alert("Failed to save file.");
-              }
-            };
+            const leaderboard = Array.from(participantMap.values()).sort((a, b) => b.score - a.score);
 
             return (
-              <Paper withBorder style={{ padding: "2rem" }}>
+              <Paper
+                withBorder
+                className={isDarkMode ? "glass-card" : ""}
+                style={{
+                  padding: "2rem",
+                  borderRadius: "12px",
+                  background: isDarkMode ? "var(--poll-glass-bg)" : "white",
+                }}
+              >
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "2rem",
+                    marginBottom: "1.5rem",
                   }}
                 >
-                  <h2 style={{ margin: 0 }}>Participant Rankings</h2>
-                  <Button
-                    variant="default"
-                    leftSection={<IconDownload size={16} />}
-                    onClick={exportCsv}
-                  >
-                    Export CSV
-                  </Button>
+                  <h2 style={{ margin: 0, color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                    Live Participant Leaderboard
+                  </h2>
                 </div>
 
                 {leaderboard.length === 0 ? (
-                  <p
-                    style={{
-                      color: "var(--theme-neutral-500)",
-                      textAlign: "center",
-                      padding: "2rem",
-                    }}
-                  >
-                    No responses yet.
+                  <p style={{ color: isDarkMode ? "#94a3b8" : "#64748b", textAlign: "center", padding: "2rem" }}>
+                    No participant answers submitted yet.
                   </p>
                 ) : (
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      textAlign: "left",
-                    }}
-                  >
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
                     <thead>
                       <tr
                         style={{
-                          borderBottom: "2px solid var(--theme-neutral-200)",
+                          borderBottom: isDarkMode ? "1px solid #334155" : "2px solid #e2e8f0",
+                          color: isDarkMode ? "#94a3b8" : "#64748b",
                         }}
                       >
-                        <th style={{ padding: "1rem" }}>Rank</th>
-                        <th style={{ padding: "1rem" }}>Name</th>
-                        <th style={{ padding: "1rem" }}>Hospital</th>
-                        <th style={{ padding: "1rem" }}>Score</th>
-                        <th style={{ padding: "1rem" }}>Total Answered</th>
+                        <th style={{ padding: "12px 16px" }}>Rank</th>
+                        <th style={{ padding: "12px 16px" }}>Participant Name</th>
+                        <th style={{ padding: "12px 16px" }}>Hospital / Group</th>
+                        <th style={{ padding: "12px 16px" }}>Score</th>
+                        <th style={{ padding: "12px 16px" }}>Total Answered</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -497,38 +675,15 @@ export default function LiveResultsView() {
                         <tr
                           key={idx}
                           style={{
-                            borderBottom: "1px solid var(--theme-neutral-100)",
+                            borderBottom: isDarkMode ? "1px solid #1e293b" : "1px solid #f1f5f9",
+                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
                           }}
                         >
-                          <td
-                            style={{
-                              padding: "1rem",
-                              fontWeight: "bold",
-                              color:
-                                idx === 0
-                                  ? "var(--theme-yellow-600)"
-                                  : "inherit",
-                            }}
-                          >
-                            #{idx + 1}
-                          </td>
-                          <td style={{ padding: "1rem" }}>{p.name}</td>
-                          <td style={{ padding: "1rem" }}>{p.hospital}</td>
-                          <td
-                            style={{
-                              padding: "1rem",
-                              fontWeight: "bold",
-                              color: "var(--theme-primary-600)",
-                            }}
-                          >
-                            {p.score}
-                          </td>
-                          <td
-                            style={{
-                              padding: "1rem",
-                              color: "var(--theme-neutral-500)",
-                            }}
-                          >
+                          <td style={{ padding: "12px 16px", fontWeight: 700 }}>#{idx + 1}</td>
+                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>{p.name}</td>
+                          <td style={{ padding: "12px 16px" }}>{p.hospital}</td>
+                          <td style={{ padding: "12px 16px", fontWeight: 700, color: "#10b981" }}>{p.score}</td>
+                          <td style={{ padding: "12px 16px", color: isDarkMode ? "#94a3b8" : "#64748b" }}>
                             {p.totalAnswered}
                           </td>
                         </tr>
@@ -540,6 +695,6 @@ export default function LiveResultsView() {
             );
           })()}
       </div>
-    </>
+    </div>
   );
 }
