@@ -12,12 +12,17 @@
       "identifier": "fs:scope",
       "allow": [
         "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/**/*",
-        "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/*"
+        "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/*",
+        "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/Reports/**/*"
       ]
     },
+    "fs:default",
     "fs:allow-read-dir",
     "fs:allow-exists",
     "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-mkdir",
+    "fs:allow-write",
     {
       "identifier": "shell:allow-execute",
       "allow": [

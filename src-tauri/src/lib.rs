@@ -14,10 +14,23 @@ fn quit_app(app_handle: tauri::AppHandle) {
   std::process::exit(0);
 }
 
+#[tauri::command]
+fn save_student_report(filename: String, content: String) -> Result<String, String> {
+  let reports_dir = std::path::Path::new("/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/Reports");
+  if let Err(e) = std::fs::create_dir_all(&reports_dir) {
+    return Err(format!("Failed to create Reports directory: {}", e));
+  }
+  let target_path = reports_dir.join(&filename);
+  if let Err(e) = std::fs::write(&target_path, content) {
+    return Err(format!("Failed to write report file: {}", e));
+  }
+  Ok(target_path.to_string_lossy().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![quit_app])
+    .invoke_handler(tauri::generate_handler![quit_app, save_student_report])
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_shell::init())

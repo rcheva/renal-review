@@ -179,6 +179,22 @@ export async function saveStudentReportToOneDrive(
 
   if (isTauri()) {
     try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const savedPath = await invoke<string>("save_student_report", {
+        filename: fileName,
+        content: htmlContent,
+      });
+      console.log(`Saved student report to OneDrive via Tauri Rust command: ${savedPath}`);
+      return {
+        success: true,
+        filePath: savedPath,
+        message: `Report successfully saved directly to OneDrive:\n${savedPath}`,
+      };
+    } catch (err) {
+      console.warn("Tauri Rust invoke save_student_report error, attempting plugin-fs:", err);
+    }
+
+    try {
       const { writeTextFile, mkdir, exists } = await import("@tauri-apps/plugin-fs");
       const dirExists = await exists(reportsFolder);
       if (!dirExists) {
@@ -192,7 +208,7 @@ export async function saveStudentReportToOneDrive(
         message: `Report successfully saved directly to OneDrive:\n${fullFilePath}`,
       };
     } catch (err) {
-      console.error("Failed writing student report to OneDrive via Tauri:", err);
+      console.error("Failed writing student report to OneDrive via Tauri plugin-fs:", err);
     }
   }
 
