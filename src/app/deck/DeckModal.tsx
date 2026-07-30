@@ -50,8 +50,35 @@ function DeckModal({
   const [descriptionValue, setDescriptionValue] = useState<string>("");
   const [deckColor, setDeckColor] = useState<ColorIdentifier>("sky");
   const [selectedParentId, setSelectedParentId] = useState<string>("");
+  const [customParentName, setCustomParentName] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  // Collect all parent choices (12 Renal Topics + existing DB root decks)
+  const existingRootDecks = (decks || []).filter(
+    (d) => !d.superDecks || d.superDecks.length === 0
+  );
+  const allParentNamesSet = new Set([
+    ...RENAL_TOPICS,
+    ...existingRootDecks.map((d) => d.name),
+  ]);
+  const sortedParentNames = Array.from(allParentNamesSet).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  const parentOptions = [
+    { label: "None (Top Level)", value: "" },
+    ...sortedParentNames.map((name) => {
+      const existingObj = existingRootDecks.find(
+        (d) => d.name.toLowerCase() === name.toLowerCase()
+      );
+      return {
+        label: name,
+        value: existingObj ? existingObj.id : `TOPIC:${name}`,
+      };
+    }),
+    { label: "➕ Create Custom Parent Deck...", value: "CUSTOM_NEW_PARENT" },
+  ];
 
   useEffect(() => {
     if (mode === "edit" && deck) {
@@ -61,12 +88,16 @@ function DeckModal({
     } else {
       setNameValue("");
       setDescriptionValue("");
+      setCustomParentName("");
       setDeckColor("sky");
       setSelectedParentId(superDeck?.id || "");
     }
   }, [mode, deck, superDeck, opened]);
 
   function isInputValid(): boolean {
+    if (selectedParentId === "CUSTOM_NEW_PARENT") {
+      return nameValue.trim() !== "" && customParentName.trim() !== "";
+    }
     return nameValue.trim() !== "";
   }
 
@@ -83,7 +114,40 @@ function DeckModal({
     try {
       if (mode === "create") {
         let parent: Deck | undefined = superDeck;
-        if (selectedParentId) {
+
+        if (selectedParentId === "CUSTOM_NEW_PARENT") {
+          const targetName = customParentName.trim();
+          const existing = (decks || []).find(
+            (d) => d.name.toLowerCase() === targetName.toLowerCase()
+          );
+          if (existing) {
+            parent = existing as Deck;
+          } else {
+            const newParentId = await newDeck(
+              targetName,
+              undefined,
+              "Custom Parent Deck",
+              "slate"
+            );
+            parent = (await db.decks.get(newParentId)) as Deck;
+          }
+        } else if (selectedParentId.startsWith("TOPIC:")) {
+          const topicName = selectedParentId.replace("TOPIC:", "");
+          const existing = (decks || []).find(
+            (d) => d.name.toLowerCase() === topicName.toLowerCase()
+          );
+          if (existing) {
+            parent = existing as Deck;
+          } else {
+            const newParentId = await newDeck(
+              topicName,
+              undefined,
+              `Renal Topic - ${topicName}`,
+              "sky"
+            );
+            parent = (await db.decks.get(newParentId)) as Deck;
+          }
+        } else if (selectedParentId) {
           const dbParent = await db.decks.get(selectedParentId);
           if (dbParent) parent = dbParent as Deck;
         }
@@ -100,10 +164,8 @@ function DeckModal({
         await updateDeck(deck.id, nameValue.trim(), descriptionValue.trim(), deckColor);
         setOpened(false);
       }
-    } catch (error) {
-      setStatus(
-        `Failed to ${mode === "create" ? "add" : "update"} deck: ${error}`
-      );
+    } catch (e: any) {
+      setStatus("Error: " + e.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -116,24 +178,23 @@ function DeckModal({
     }
   }
 
-  useHotkeys([["mod+Enter", () => handleSubmit()]]);
+  useHotkeys([["Enter", () => void handleSubmit()]]);
 
-  const title =
+  const modalTitle =
     mode === "create"
-      ? superDeck
-        ? t("deck.new-deck-modal.new-subdeck", { superDeck: superDeck.name })
-        : t("deck.new-deck-modal.new-deck")
-      : t("deck.edit.title", { deckName: deck?.name || "" });
+      ? t("deck.new-deck-modal.title")
+      : t("deck.edit-deck-modal.title");
 
   const submitButtonText =
-    mode === "create" ? t("deck.new-deck-modal.submit") : t("deck.edit.submit");
+    mode === "create"
+      ? t("deck.new-deck-modal.create-deck")
+      : t("deck.edit-deck-modal.save");
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={title}>
-      <div className={`${BASE}__form`}>
+    <Modal opened={opened} onClose={handleClose} title={modalTitle}>
+      <div className={BASE}>
         <TextInput
           placeholder={t("deck.new-deck-modal.name-placeholder")}
-          autoFocus
           label={t("deck.new-deck-modal.name")}
           value={nameValue}
           onChange={(e) => setNameValue(e.currentTarget.value)}
@@ -148,22 +209,23 @@ function DeckModal({
         />
 
         {mode === "create" && (
-          <Select
-            label="Parent Deck (Select Renal Topic)"
-            value={selectedParentId}
-            onChange={(val) => setSelectedParentId(val || "")}
-            options={[
-              { label: "None (Top Level)", value: "" },
-              ...(decks || [])
-                .filter(
-                  (d) =>
-                    (!d.superDecks || d.superDecks.length === 0) &&
-                    RENAL_TOPICS.includes(d.name)
-                )
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((d) => ({ label: d.name, value: d.id })),
-            ]}
-          />
+          <>
+            <Select
+              label="Parent Deck (Select Renal Topic)"
+              value={selectedParentId}
+              onChange={(val) => setSelectedParentId(val || "")}
+              options={parentOptions}
+            />
+
+            {selectedParentId === "CUSTOM_NEW_PARENT" && (
+              <TextInput
+                label="Custom Parent Deck Name"
+                placeholder="e.g. 'Glomerulonephritis Special Topic' or 'Rotation 2026'"
+                value={customParentName}
+                onChange={(e) => setCustomParentName(e.target.value)}
+              />
+            )}
+          </>
         )}
 
         <DeckColorChooser deckColor={deckColor} setDeckColor={setDeckColor} />

@@ -44,6 +44,7 @@ export function ImportJsonFlashcardsModal({
   const [subdeckName, setSubdeckName] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
   const [selectedParentId, setSelectedParentId] = useState(defaultParentId);
+  const [customParentName, setCustomParentName] = useState("");
   const [deckColor, setDeckColor] = useState<ColorIdentifier>("sky");
 
   const [jsonText, setJsonText] = useState("");
@@ -52,24 +53,40 @@ export function ImportJsonFlashcardsModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  // Filter top-level Renal topics
-  const renalTopics = (allDecks || [])
-    .filter(
-      (d) =>
-        (!d.superDecks || d.superDecks.length === 0) &&
-        RENAL_TOPICS.includes(d.name)
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Collect all parent choices (12 Renal Topics + existing DB root decks)
+  const existingRootDecks = (allDecks || []).filter(
+    (d) => !d.superDecks || d.superDecks.length === 0
+  );
+  const allParentNamesSet = new Set([
+    ...RENAL_TOPICS,
+    ...existingRootDecks.map((d) => d.name),
+  ]);
+  const sortedParentNames = Array.from(allParentNamesSet).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  const parentOptions = [
+    ...sortedParentNames.map((name) => {
+      const existingObj = existingRootDecks.find(
+        (d) => d.name.toLowerCase() === name.toLowerCase()
+      );
+      return {
+        label: name,
+        value: existingObj ? existingObj.id : `TOPIC:${name}`,
+      };
+    }),
+    { label: "➕ Create Custom Parent Deck...", value: "CUSTOM_NEW_PARENT" },
+  ];
 
   useEffect(() => {
     if (opened) {
       if (defaultParentId) {
         setSelectedParentId(defaultParentId);
-      } else if (renalTopics.length > 0 && !selectedParentId) {
-        setSelectedParentId(renalTopics[0].id);
+      } else if (parentOptions.length > 0 && !selectedParentId) {
+        setSelectedParentId(parentOptions[0].value);
       }
     }
-  }, [opened, defaultParentId, renalTopics]);
+  }, [opened, defaultParentId]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -154,7 +171,43 @@ export function ImportJsonFlashcardsModal({
 
       // 1. Get or create parent deck
       let parentDeckObj: Deck | undefined = undefined;
-      if (selectedParentId) {
+
+      if (selectedParentId === "CUSTOM_NEW_PARENT") {
+        if (!customParentName.trim()) {
+          throw new Error("Please enter a name for the custom parent deck.");
+        }
+        const targetName = customParentName.trim();
+        const existing = (allDecks || []).find(
+          (d) => d.name.toLowerCase() === targetName.toLowerCase()
+        );
+        if (existing) {
+          parentDeckObj = existing as Deck;
+        } else {
+          const newParentId = await newDeck(
+            targetName,
+            undefined,
+            "Custom Parent Deck",
+            "slate"
+          );
+          parentDeckObj = (await db.decks.get(newParentId)) as Deck;
+        }
+      } else if (selectedParentId.startsWith("TOPIC:")) {
+        const topicName = selectedParentId.replace("TOPIC:", "");
+        const existing = (allDecks || []).find(
+          (d) => d.name.toLowerCase() === topicName.toLowerCase()
+        );
+        if (existing) {
+          parentDeckObj = existing as Deck;
+        } else {
+          const newParentId = await newDeck(
+            topicName,
+            undefined,
+            `Renal Topic - ${topicName}`,
+            "sky"
+          );
+          parentDeckObj = (await db.decks.get(newParentId)) as Deck;
+        }
+      } else if (selectedParentId) {
         const dbParent = await db.decks.get(selectedParentId);
         if (dbParent) parentDeckObj = dbParent as Deck;
       }
@@ -207,6 +260,7 @@ export function ImportJsonFlashcardsModal({
       // Reset state
       setSubdeckName("");
       setDescriptionValue("");
+      setCustomParentName("");
       setJsonText("");
       setUploadedFileName("");
       setDetectedCount(0);
@@ -250,11 +304,18 @@ export function ImportJsonFlashcardsModal({
           label="Parent Deck (Select Renal Topic)"
           value={selectedParentId}
           onChange={(val) => setSelectedParentId(val || "")}
-          options={renalTopics.map((d) => ({
-            label: d.name,
-            value: d.id,
-          }))}
+          options={parentOptions}
         />
+
+        {selectedParentId === "CUSTOM_NEW_PARENT" && (
+          <TextInput
+            label="Custom Parent Deck Name"
+            placeholder="e.g. 'Glomerulonephritis Special Topic' or 'Rotation 2026'"
+            value={customParentName}
+            onChange={(e) => setCustomParentName(e.target.value)}
+            autoFocus
+          />
+        )}
 
         <DeckColorChooser deckColor={deckColor} setDeckColor={setDeckColor} />
 
