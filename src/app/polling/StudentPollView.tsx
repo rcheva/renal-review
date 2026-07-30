@@ -1,10 +1,12 @@
-import { Button, Paper, TextInput } from "@/components/ui";
+import { Button, Paper } from "@/components/ui";
 import { supabase } from "@/logic/supabase";
 import { IconCheck, IconDownload } from "@tabler/icons-react";
 import parse from "html-react-parser";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Poll, Question } from "./types";
+import { Poll, Question, Student } from "./types";
+import StudentAuthModal from "./StudentAuthModal";
+import { getCurrentSessionStudent } from "./pollingStore";
 
 export default function StudentPollView() {
   const { pollId } = useParams();
@@ -14,13 +16,23 @@ export default function StudentPollView() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  const [activeStudent, setActiveStudent] = useState<Student | null>(() => getCurrentSessionStudent());
+  const [showAuthModal, setShowAuthModal] = useState(!getCurrentSessionStudent());
+
   const [studentName, setStudentName] = useState("");
-  const [hospital, setHospital] = useState("MRHT");
+  const [hospital, setHospital] = useState("Renal");
   const [hasStarted, setHasStarted] = useState(false);
   const [studentResponses, setStudentResponses] = useState<
     Record<string, number>
   >({});
   const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (activeStudent) {
+      setStudentName(activeStudent.name);
+      setHospital(activeStudent.group_name || "Renal");
+    }
+  }, [activeStudent]);
 
   useEffect(() => {
     if (pollId) {
@@ -68,16 +80,39 @@ export default function StudentPollView() {
     setHasSubmitted(true);
 
     const q = questions[currentQuestionIndex];
+    const isCorrect = q.correct_option_index !== null && originalIndex === q.correct_option_index;
+
     setStudentResponses((prev) => ({ ...prev, [q.id]: originalIndex }));
 
-    await supabase.from("responses").insert([
-      {
-        question_id: q.id,
-        selected_option_index: originalIndex,
-        respondent_name: studentName.trim() || null,
-        hospital: hospital.trim() || null,
-      },
-    ]);
+    const responsePayload = {
+      question_id: q.id,
+      selected_option_index: originalIndex,
+      respondent_name: activeStudent ? activeStudent.name : studentName.trim() || null,
+      hospital: activeStudent ? activeStudent.group_name : hospital.trim() || null,
+      student_id: activeStudent ? activeStudent.student_code : null,
+      is_correct: isCorrect,
+    };
+
+    try {
+      await supabase.from("responses").insert([responsePayload]);
+    } catch (e) {
+      console.warn("Could not insert response into Supabase", e);
+    }
+
+    // Always preserve local backup of responses for leaderboard & reports fallback
+    try {
+      const LOCAL_RESPONSES_KEY = "renal_review_responses";
+      const existingStr = localStorage.getItem(LOCAL_RESPONSES_KEY);
+      const existing = existingStr ? JSON.parse(existingStr) : [];
+      existing.push({
+        ...responsePayload,
+        id: "resp_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem(LOCAL_RESPONSES_KEY, JSON.stringify(existing));
+    } catch (e) {
+      console.warn("Could not save response locally", e);
+    }
 
     setCurrentQuestionIndex((prev) => prev + 1);
     setHasSubmitted(false);
@@ -430,28 +465,48 @@ export default function StudentPollView() {
               textAlign: "center",
             }}
           >
-            Enter your details to participate. Both fields are optional.
+            Authenticated as <strong>{activeStudent?.name || "Student"}</strong> ({activeStudent?.student_code || "Guest"}) - Group: {activeStudent?.group_name || "Renal"}
           </p>
+
+          <StudentAuthModal
+            isOpen={showAuthModal || !activeStudent}
+            onAuthenticated={(student) => {
+              setActiveStudent(student);
+              setStudentName(student.name);
+              setHospital(student.group_name);
+              setShowAuthModal(false);
+              setHasStarted(true);
+            }}
+          />
+
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "1.5rem",
+              gap: "1rem",
               marginBottom: "2rem",
             }}
           >
-            <TextInput
-              label="Name (Optional)"
-              placeholder="e.g. Dr. Smith"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-            />
-            <TextInput
-              label="Hospital (Optional)"
-              placeholder="e.g. MRHT"
-              value={hospital}
-              onChange={(e) => setHospital(e.target.value)}
-            />
+            <div style={{ padding: "12px", background: "#f3f4f6", borderRadius: "6px", fontSize: "0.9rem" }}>
+              <div><strong>Student ID:</strong> {activeStudent?.student_code}</div>
+              <div><strong>Name:</strong> {activeStudent?.name}</div>
+              <div><strong>Group:</strong> {activeStudent?.group_name}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAuthModal(true)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--color-primary, #2563eb)",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                textAlign: "center",
+                textDecoration: "underline",
+              }}
+            >
+              Switch Student / Enter PIN
+            </button>
           </div>
           <Button
             size="lg"

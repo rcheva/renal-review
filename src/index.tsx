@@ -12,6 +12,8 @@ import EditPollView from "@/app/polling/EditPollView";
 import LiveResultsView from "@/app/polling/LiveResultsView";
 import PollingDashboard from "@/app/polling/PollingDashboard";
 import StudentPollView from "@/app/polling/StudentPollView";
+import PollLeaderboardView from "@/app/polling/PollLeaderboardView";
+import StudentReportView from "@/app/polling/StudentReportView";
 import SettingsView from "@/app/settings/SettingsView";
 import StatsView from "@/app/statistics/StatsView";
 import React from "react";
@@ -85,6 +87,14 @@ const router = createHashRouter(
         {
           path: "/polling/live/:pollId",
           element: <LiveResultsView />,
+        },
+        {
+          path: "/polling/leaderboard",
+          element: <PollLeaderboardView />,
+        },
+        {
+          path: "/polling/reports",
+          element: <StudentReportView />,
         },
         {
           path: "/admin",

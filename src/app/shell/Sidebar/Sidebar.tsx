@@ -7,6 +7,7 @@ import {
   IconCards,
   IconChartBar,
   IconHome,
+  IconReportAnalytics,
   IconSettings,
   IconShieldCheck,
   IconTrophy,
@@ -106,6 +107,20 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
             <NavItem
               label={"Live Polling"}
               path="/polling"
+              icon={<IconChartBar />}
+              collapsed={minimalMode}
+              onClick={fullscreenMode ? menuHandlers.close : undefined}
+            />
+            <NavItem
+              label={"Poll Administration"}
+              path="/polling/reports"
+              icon={<IconReportAnalytics />}
+              collapsed={minimalMode}
+              onClick={fullscreenMode ? menuHandlers.close : undefined}
+            />
+            <NavItem
+              label={"Poll Leaderboard"}
+              path="/polling/leaderboard"
               icon={<IconTrophy />}
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
