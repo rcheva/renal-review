@@ -5,6 +5,7 @@ import { AppHeaderContent } from "../shell/Header/Header";
 import { supabase } from "@/logic/supabase";
 import { Student, PollGroup, Response, Question } from "./types";
 import { getStudents, getPollGroups } from "./pollingStore";
+import { seedTestStudentsAndResponses } from "./seedTestStudents";
 import {
   IconTrophy,
   IconMedal,
@@ -12,6 +13,7 @@ import {
   IconFilter,
   IconReportAnalytics,
   IconArrowLeft,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
@@ -166,6 +168,12 @@ export default function PollLeaderboardView() {
     return matchesGroup && matchesSearch;
   });
 
+  const handleSeedStudents = async () => {
+    const res = await seedTestStudentsAndResponses();
+    alert(res.message);
+    loadData();
+  };
+
   return (
     <>
       <AppHeaderContent>
@@ -214,7 +222,14 @@ export default function PollLeaderboardView() {
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "0.75rem" }}>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              variant="default"
+              onClick={handleSeedStudents}
+              leftSection={<IconUserPlus size={16} color="#10b981" />}
+            >
+              Seed 5 Test Students
+            </Button>
             <Button
               variant="default"
               onClick={() => navigate("/polling")}
