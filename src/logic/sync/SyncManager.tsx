@@ -29,41 +29,35 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { session } = useAuthSession();
   const [lastSyncedAt] = useSetting("#cloud_lastSyncedAt");
-  const [autoSyncEnabled] = useSetting("#cloud_autoSyncEnabled");
   const [isSyncing, setIsSyncing] = useState(false);
 
   const dirtyRef = useRef(false);
   const syncTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!session?.user || !autoSyncEnabled) return;
-
-    // 1. Initial Auto-Restore Check
+    // 1. Initial Auto-Restore Check on Startup
     const checkAndRestore = async () => {
       try {
         setIsSyncing(true);
-        const { data: backup, error } = await supabase
+        let query = supabase
           .from("user_backups")
           .select("created_at, data")
-          .eq("user_id", session.user.id)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
+          .limit(1);
 
-        if (error) {
-          if (error.code === "PGRST116") {
-            // No rows found, this is fine
-            return;
-          }
-          throw error;
+        if (session?.user?.id) {
+          query = query.eq("user_id", session.user.id);
         }
-        if (!backup) return;
 
+        const { data: backups, error } = await query;
+        if (error || !backups || backups.length === 0) return;
+
+        const backup = backups[0];
         const backupTime = new Date(backup.created_at).getTime();
+        const localTime = lastSyncedAt ? Number(lastSyncedAt) : 0;
 
-        // If the cloud backup is newer than local last synced time (with 5 sec buffer)
-        if (backupTime > (lastSyncedAt || 0) + 5000) {
-          console.log("Cloud backup is newer. Restoring...");
+        if (backupTime > localTime + 3000) {
+          console.log("Cloud deck backup is newer. Restoring automatically...");
           const text = JSON.stringify(backup.data);
           const blob = new Blob([text], { type: "application/json" });
           await importInto(db, blob, {
@@ -71,48 +65,48 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
             overwriteValues: true,
           });
           await setSetting("#cloud_lastSyncedAt", backupTime);
-
-          // Force a reload so UI picks up new data if we were already loaded
           setTimeout(() => window.location.reload(), 1000);
         }
       } catch (err) {
-        console.error("Auto-restore failed:", err);
+        console.error("Auto-restore error:", err);
       } finally {
         setIsSyncing(false);
       }
     };
 
     checkAndRestore();
-  }, [session?.user, autoSyncEnabled]);
+  }, [session?.user, lastSyncedAt]);
 
-  // 2. Setup Dirty Tracking
+  // 2. Setup Automatic Backup Tracking
   useEffect(() => {
-    if (!session?.user || !autoSyncEnabled) return;
-
     const markDirty = () => {
       dirtyRef.current = true;
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
 
-      // Debounce backup for 10 seconds after last modification
-      syncTimeoutRef.current = setTimeout(performAutoBackup, 10000);
+      // Debounce backup for 5 seconds after last modification
+      syncTimeoutRef.current = setTimeout(performAutoBackup, 5000);
     };
 
     const performAutoBackup = async () => {
       if (!dirtyRef.current) return;
       try {
         setIsSyncing(true);
-        console.log("Performing auto-backup...");
+        console.log("Performing auto-backup of decks to Supabase...");
         const blob = await exportDB(db);
         const text = await blob.text();
         const data = JSON.parse(text);
+        const userId = session?.user?.id || "global_master";
 
         const { error, data: newBackup } = await supabase
           .from("user_backups")
-          .insert({ user_id: session.user.id, data })
+          .insert({ user_id: userId, data })
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.warn("Auto-backup insert error", error);
+          return;
+        }
 
         if (newBackup) {
           const newTime = new Date(newBackup.created_at).getTime();
@@ -121,7 +115,7 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
 
         dirtyRef.current = false;
       } catch (err) {
-        console.error("Auto-backup failed:", err);
+        console.error("Auto-backup error:", err);
       } finally {
         setIsSyncing(false);
       }
@@ -144,7 +138,7 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
         table.hook("deleting").unsubscribe(markDirty);
       });
     };
-  }, [session?.user, autoSyncEnabled]);
+  }, [session?.user]);
 
   return (
     <SyncContext.Provider value={{ isSyncing, lastSyncedAt }}>
