@@ -41,4 +41,7 @@ export interface SettingsValues {
 
   "#cloud_lastSyncedAt": number;
   "#cloud_autoSyncEnabled": boolean;
+
+  "#notification_enabled"?: boolean;
+  "#notification_dailyReminderTime"?: string;
 }

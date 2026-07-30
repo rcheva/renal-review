@@ -28,6 +28,10 @@ import { useSetting } from "./logic/settings/hooks/useSetting";
 import { setSetting } from "./logic/settings/setSetting";
 import { SyncManagerProvider } from "./logic/sync/SyncManager";
 import { syncAllStructureToOneDrive } from "./logic/oneDriveSync";
+import {
+  checkDailyReminderSchedule,
+  requestNotificationPermission,
+} from "./logic/notification/NotificationManager";
 
 const BASE = "app-shell";
 
@@ -53,6 +57,21 @@ function AppContent() {
     "hasWipedOldDb_v4",
     false
   );
+
+  const [notificationEnabled] = useSetting("#notification_enabled");
+  const [reminderTime] = useSetting("#notification_dailyReminderTime");
+
+  useEffect(() => {
+    if (notificationEnabled !== false) {
+      requestNotificationPermission();
+      const timeStr = reminderTime || "21:00";
+      checkDailyReminderSchedule(timeStr);
+      const interval = setInterval(() => {
+        checkDailyReminderSchedule(timeStr);
+      }, 10 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [notificationEnabled, reminderTime]);
 
   useEffect(() => {
     // Force auto-sync off for now per user request
