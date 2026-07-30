@@ -14,6 +14,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, PollGroup } from "./types";
+import { v4 as uuidv4 } from "uuid";
 import { getPollGroups, addPollGroup } from "./pollingStore";
 
 export default function PollingDashboard() {
@@ -102,7 +103,7 @@ export default function PollingDashboard() {
     }
 
     if (!pollId) {
-      pollId = "poll_" + Date.now();
+      pollId = uuidv4();
       const localPollsStr = localStorage.getItem("renal_review_polls");
       const localPolls = localPollsStr ? JSON.parse(localPollsStr) : [];
       const createdPoll = {

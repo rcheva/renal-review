@@ -55,9 +55,21 @@
 
 .home-view__topic-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-3xl);
+}
+
+@media (max-width: 900px) {
+  .home-view__topic-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .home-view__topic-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .home-view__topic-card {

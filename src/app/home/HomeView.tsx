@@ -18,21 +18,6 @@ import "./HomeView.css";
 
 const BASE = "home-view";
 
-const MAIN_TOPICS = [
-  "CKD",
-  "AKI",
-  "GMN",
-  "Dialysis",
-  "Transplant",
-  "Electrolytes",
-  "Hypertension",
-  "Genetics / Rare",
-  "Guidelines",
-  "RCT",
-  "Miscellaneous",
-  "GIM",
-];
-
 export default function HomeView() {
   useDocumentTitle("Renal Review");
   const [t] = useTranslation();
@@ -67,13 +52,11 @@ export default function HomeView() {
     }
   };
 
-  // Derive top-level topic decks
+  // Derive top-level topic decks (all root parent decks)
   const topicDecks = useMemo(() => {
     if (!allDecks) return [];
     return allDecks.filter(
-      (d) =>
-        (!d.superDecks || d.superDecks.length === 0) &&
-        MAIN_TOPICS.includes(d.name)
+      (d) => !d.superDecks || d.superDecks.length === 0
     );
   }, [allDecks]);
 

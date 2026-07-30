@@ -179,6 +179,22 @@ export default function EditPollView() {
         }
       }
     }
+
+    // Load local questions fallback
+    const localQKey = `renal_questions_${pollId}`;
+    const localQStr = localStorage.getItem(localQKey);
+    if (localQStr) {
+      try {
+        const localQs: Question[] = JSON.parse(localQStr);
+        setQuestions((prev) => {
+          const ids = new Set(prev.map((q) => q.id));
+          const toAdd = localQs.filter((q) => !ids.has(q.id));
+          return [...prev, ...toAdd];
+        });
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const handleAddOption = () => setNewOptions([...newOptions, ""]);
@@ -199,24 +215,48 @@ export default function EditPollView() {
   const handleAddQuestion = async () => {
     if (!newQuestionText.trim() || newOptions.some((o) => !o.trim())) return;
 
-    const { error } = await supabase.from("questions").insert([
-      {
-        poll_id: pollId,
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pollId || "");
+    const payload = {
+      poll_id: pollId,
+      question_text: newQuestionText,
+      options: newOptions,
+      correct_option_index: newCorrectIndex,
+      explanation: newExplanation,
+    };
+
+    if (isUuid) {
+      try {
+        await supabase.from("questions").insert([payload]);
+      } catch (e) {
+        console.warn("Could not insert question into Supabase", e);
+      }
+    }
+
+    // Save locally as fallback
+    try {
+      const localQKey = `renal_questions_${pollId}`;
+      const existingLocalStr = localStorage.getItem(localQKey);
+      const existingLocal: Question[] = existingLocalStr ? JSON.parse(existingLocalStr) : [];
+      const newQ: Question = {
+        id: "q_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+        poll_id: pollId || "",
         question_text: newQuestionText,
         options: newOptions,
         correct_option_index: newCorrectIndex,
         explanation: newExplanation,
-      },
-    ]);
-
-    if (!error) {
-      setNewQuestionText("");
-      setNewOptions(["", ""]);
-      setNewCorrectIndex(null);
-      setNewExplanation("");
-      newQuestionEditor?.commands.setContent("");
-      fetchPollData();
+        created_at: new Date().toISOString(),
+      };
+      localStorage.setItem(localQKey, JSON.stringify([...existingLocal, newQ]));
+    } catch {
+      // ignore
     }
+
+    setNewQuestionText("");
+    setNewOptions(["", ""]);
+    setNewCorrectIndex(null);
+    setNewExplanation("");
+    newQuestionEditor?.commands.setContent("");
+    fetchPollData();
   };
 
   const handleCopyAiPrompt = () => {
@@ -287,10 +327,38 @@ Here are the flashcards:\n\n`;
         };
       });
 
-      const { error } = await supabase
-        .from("questions")
-        .insert(questionsToInsert);
-      if (error) throw error;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pollId || "");
+
+      if (isUuid) {
+        try {
+          const { error: insErr } = await supabase.from("questions").insert(questionsToInsert);
+          if (insErr) {
+            console.warn("Supabase questions insert error, storing locally", insErr);
+          }
+        } catch (err) {
+          console.warn("Could not insert questions into Supabase", err);
+        }
+      }
+
+      // Always save locally to ensure offline / non-UUID poll fallback
+      try {
+        const localQKey = `renal_questions_${pollId}`;
+        const existingLocalStr = localStorage.getItem(localQKey);
+        const existingLocal: Question[] = existingLocalStr ? JSON.parse(existingLocalStr) : [];
+        const newLocalQs: Question[] = questionsToInsert.map((q, idx) => ({
+          id: "q_" + Date.now() + "_" + idx,
+          poll_id: pollId || "",
+          question_text: q.question_text,
+          options: q.options,
+          correct_option_index: q.correct_option_index,
+          explanation: q.explanation,
+          created_at: new Date().toISOString(),
+        }));
+        localStorage.setItem(localQKey, JSON.stringify([...existingLocal, ...newLocalQs]));
+        setQuestions((prev) => [...prev, ...newLocalQs]);
+      } catch (err) {
+        console.warn("Error saving questions locally", err);
+      }
 
       setIsAiModalOpen(false);
       setAiJsonText("");
