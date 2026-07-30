@@ -2,6 +2,7 @@ import type ModalProps from "@/components/ModalProps";
 import { Button, Modal, Select, TextInput } from "@/components/ui";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import type { Deck } from "@/logic/deck/deck";
+import { db } from "@/logic/db";
 import { newDeck } from "@/logic/deck/newDeck";
 import { updateDeck } from "@/logic/deck/updateDeck";
 import { t } from "i18next";
@@ -13,6 +14,21 @@ import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import DeckColorChooser from "./DeckColorChooser";
 
 const BASE = "deck-modal";
+
+const RENAL_TOPICS = [
+  "CKD",
+  "AKI",
+  "GMN",
+  "Dialysis",
+  "Transplant",
+  "Electrolytes",
+  "Hypertension",
+  "Genetics / Rare",
+  "Guidelines",
+  "RCT",
+  "Miscellaneous",
+  "GIM",
+];
 
 interface DeckModalProps extends ModalProps {
   mode: "create" | "edit";
@@ -66,18 +82,22 @@ function DeckModal({
 
     try {
       if (mode === "create") {
-        const parent =
-          decks?.find((d) => d.id === selectedParentId) || superDeck;
+        let parent: Deck | undefined = superDeck;
+        if (selectedParentId) {
+          const dbParent = await db.decks.get(selectedParentId);
+          if (dbParent) parent = dbParent as Deck;
+        }
+
         const id = await newDeck(
-          nameValue,
+          nameValue.trim(),
           parent,
-          descriptionValue,
+          descriptionValue.trim(),
           deckColor
         );
         setOpened(false);
         navigate("/deck/" + id);
       } else if (mode === "edit" && deck) {
-        await updateDeck(deck.id, nameValue, descriptionValue, deckColor);
+        await updateDeck(deck.id, nameValue.trim(), descriptionValue.trim(), deckColor);
         setOpened(false);
       }
     } catch (error) {
@@ -129,12 +149,19 @@ function DeckModal({
 
         {mode === "create" && (
           <Select
-            label="Parent Deck (Optional)"
+            label="Parent Deck (Select Renal Topic)"
             value={selectedParentId}
             onChange={(val) => setSelectedParentId(val || "")}
             options={[
               { label: "None (Top Level)", value: "" },
-              ...(decks || []).map((d) => ({ label: d.name, value: d.id })),
+              ...(decks || [])
+                .filter(
+                  (d) =>
+                    (!d.superDecks || d.superDecks.length === 0) &&
+                    RENAL_TOPICS.includes(d.name)
+                )
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((d) => ({ label: d.name, value: d.id })),
             ]}
           />
         )}

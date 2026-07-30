@@ -107,3 +107,23 @@
   color: var(--theme-orange-900);
   background-color: var(--theme-orange-50);
 }
+
+.deck-card-base--color-yellow {
+  background-color: var(--theme-yellow-200, #fef08a);
+  color: var(--theme-yellow-900, #713f12);
+}
+
+.deck-card-base--color-yellow .badge {
+  color: var(--theme-yellow-900, #713f12);
+  background-color: var(--theme-yellow-50, #fefce8);
+}
+
+.deck-card-base--color-slate {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.deck-card-base--color-slate .badge {
+  color: #0f172a;
+  background-color: #ffffff;
+}

@@ -1,4 +1,5 @@
 import App from "@/App";
+import DeckAdminView from "@/app/admin/DeckAdminView";
 import AnythingLLMView from "@/app/ai/AnythingLLMView";
 import NotebookLMView from "@/app/ai/NotebookLMView";
 import DeckView from "@/app/deck/DeckView";
@@ -84,6 +85,10 @@ const router = createHashRouter(
         {
           path: "/polling/live/:pollId",
           element: <LiveResultsView />,
+        },
+        {
+          path: "/admin",
+          element: <DeckAdminView />,
         },
       ],
     },

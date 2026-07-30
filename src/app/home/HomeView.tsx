@@ -6,11 +6,13 @@ import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { isTauri } from "@/lib/isTauri";
-import { IconFolder, IconPlus, IconPower, IconSearch } from "@tabler/icons-react";
+import { IconFileImport, IconFolder, IconPlus, IconPower, IconSearch } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import DeckModal from "../deck/DeckModal";
+import DeckMenu from "../deck/DeckMenu";
+import { ImportJsonFlashcardsModal } from "../deck/ImportJsonFlashcardsModal";
 import { AppHeaderContent } from "../shell/Header/Header";
 import "./HomeView.css";
 
@@ -27,6 +29,8 @@ const MAIN_TOPICS = [
   "Genetics / Rare",
   "Guidelines",
   "RCT",
+  "Miscellaneous",
+  "GIM",
 ];
 
 export default function HomeView() {
@@ -34,6 +38,7 @@ export default function HomeView() {
   const [t] = useTranslation();
   const navigate = useNavigate();
   const [newDeckModalOpened, setNewDeckModalOpened] = useState(false);
+  const [isImportFlashcardsModalOpen, setIsImportFlashcardsModalOpen] = useState(false);
   const [allDecks, isReady] = useAllDecks();
   const [userName, userNameIsReady] = useSetting("#name");
 
@@ -96,6 +101,14 @@ export default function HomeView() {
       <AppHeaderContent>
         <AppBreadcrumbs />
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <Button
+            onClick={() => setIsImportFlashcardsModalOpen(true)}
+            leftSection={<IconFileImport size={16} />}
+            variant="default"
+          >
+            Import Flashcards (JSON)
+          </Button>
+
           <Tooltip
             label={
               <>
@@ -231,6 +244,7 @@ export default function HomeView() {
                 <th>Deck Name</th>
                 <th>Cards</th>
                 <th>Notes</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -246,6 +260,9 @@ export default function HomeView() {
                   </td>
                   <td>{deck.cards.length}</td>
                   <td>{deck.notes.length}</td>
+                  <td>
+                    <DeckMenu deck={deck} ready={true} triggerSize="sm" withShortcuts={false} />
+                  </td>
                 </tr>
               ))}
               {filteredDecks.length === 0 && (
@@ -271,6 +288,11 @@ export default function HomeView() {
         mode="create"
         opened={newDeckModalOpened}
         setOpened={setNewDeckModalOpened}
+      />
+
+      <ImportJsonFlashcardsModal
+        opened={isImportFlashcardsModalOpen}
+        onClose={() => setIsImportFlashcardsModalOpen(false)}
       />
     </>
   );

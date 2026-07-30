@@ -12,6 +12,7 @@ import { useDeckFromUrl } from "@/logic/deck/hooks/useDeckFromUrl";
 import { useSuperDecks } from "@/logic/deck/hooks/useSuperDecks";
 import { IconPlus } from "@tabler/icons-react";
 import { t } from "i18next";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NotebookView from "../notebook/NotebookView";
 import { AppHeaderContent } from "../shell/Header/Header";
@@ -23,16 +24,26 @@ import { Deck } from "@/logic/deck/deck";
 import DeckHeroSection from "./DeckHeroSection/DeckHeroSection";
 import StudyMaterialsView from "./StudyMaterials/StudyMaterialsView";
 import SubDeckSection from "./SubDeckSection";
+import { ImportJsonFlashcardsModal } from "./ImportJsonFlashcardsModal";
+import { ensureNoteCardsExist } from "@/logic/note/ensureNoteCardsExist";
+import { useEffect } from "react";
 
 const BASE = "deck-view";
 
 function DeckView() {
   const navigate = useNavigate();
+  const [isJsonImportOpen, setIsJsonImportOpen] = useState(false);
 
   const [deck, isDeckReady] = useDeckFromUrl();
   const [superDecks] = useSuperDecks(deck);
   const [cards, areCardsReady] = useCardsOf(deck);
   const [states, areStatesReady] = useCardStateCounts(deck);
+
+  useEffect(() => {
+    if (deck) {
+      ensureNoteCardsExist(deck);
+    }
+  }, [deck]);
 
   useScrollResetOnLocationChange();
 
@@ -84,7 +95,12 @@ function DeckView() {
       </AppHeaderContent>
       {ready && states && (
         <div className={BASE}>
-          <DeckHeroSection deck={deck} cards={cards} states={states} />
+          <DeckHeroSection
+            deck={deck}
+            cards={cards}
+            states={states}
+            onOpenImportModal={() => setIsJsonImportOpen(true)}
+          />
           <Tabs defaultValue="subdecks" variant="outline">
             <Tabs.List>
               <Tabs.Tab value="subdecks">
@@ -139,6 +155,12 @@ function DeckView() {
           </Tabs>
         </div>
       )}
+
+      <ImportJsonFlashcardsModal
+        opened={isJsonImportOpen}
+        onClose={() => setIsJsonImportOpen(false)}
+        defaultParentId={deck?.id}
+      />
     </>
   );
 }

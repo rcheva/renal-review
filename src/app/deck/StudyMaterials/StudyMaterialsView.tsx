@@ -14,7 +14,6 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import AddMaterialModal from "./AddMaterialModal";
-import LLMDownloadButton from "./LLMDownloadButton";
 import MaterialViewer from "./MaterialViewer";
 
 interface StudyMaterialsViewProps {
@@ -71,7 +70,6 @@ export default function StudyMaterialsView({ deck }: StudyMaterialsViewProps) {
           Study Materials & Guides
         </Text>
         <div style={{ display: "flex", gap: "var(--spacing-sm)" }}>
-          <LLMDownloadButton deck={deck} />
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => setAddModalOpen(true)}
@@ -84,7 +82,7 @@ export default function StudyMaterialsView({ deck }: StudyMaterialsViewProps) {
       {materials.length === 0 ? (
         <EmptyNotice
           icon={IconFileDescription}
-          description="No study materials added yet. Export from NotebookLM and paste them here!"
+          description="No study materials added yet."
         />
       ) : (
         <div

@@ -5,6 +5,7 @@ import { useSimplifiedStatesOf } from "@/logic/card/hooks/useSimplifiedStatesOf"
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Deck } from "../../logic/deck/deck";
+import DeckMenu from "./DeckMenu";
 import "./DeckPreview.css";
 
 type DeckPreviewProps = {
@@ -28,7 +29,19 @@ export default function DeckPreview({ deck }: DeckPreviewProps) {
       withTexture
       withBorder
       id={`deck-preview-${deck.id}`}
+      style={{ position: "relative" }}
     >
+      <div
+        style={{
+          position: "absolute",
+          top: "8px",
+          right: "8px",
+          zIndex: 10,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DeckMenu deck={deck} ready={true} triggerSize="sm" withShortcuts={false} />
+      </div>
       <div className={`${BASE}__content`}>
         <h3 className={`deck-card-base__title ${BASE}__title`}>{deck.name}</h3>
         <div className={`deck-card-base__details ${BASE}__details`}>

@@ -27,6 +27,7 @@ import { useDeckStatsCacheInit } from "./logic/deck/hooks/useDeckStatsCacheInit"
 import { useSetting } from "./logic/settings/hooks/useSetting";
 import { setSetting } from "./logic/settings/setSetting";
 import { SyncManagerProvider } from "./logic/sync/SyncManager";
+import { syncAllStructureToOneDrive } from "./logic/oneDriveSync";
 
 const BASE = "app-shell";
 
@@ -56,6 +57,9 @@ function AppContent() {
   useEffect(() => {
     // Force auto-sync off for now per user request
     setSetting("#cloud_autoSyncEnabled", false);
+
+    // Sync all Renal topic and subdeck directories to OneDrive
+    syncAllStructureToOneDrive();
 
     if (!hasWipedDb) {
       setHasWipedDb(true);

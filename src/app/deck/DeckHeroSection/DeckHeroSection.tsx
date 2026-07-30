@@ -16,6 +16,7 @@ interface DeckHeroSectionProps {
   deck?: Deck;
   cards?: Card<any>[];
   states: ReturnType<typeof useSimplifiedStatesOf>;
+  onOpenImportModal?: () => void;
 }
 
 interface HeroWrapperProps {
@@ -63,7 +64,7 @@ function MessageContent({ title, subtitle }: MessageContentProps) {
   );
 }
 
-function DeckHeroSection({ deck, cards, states }: DeckHeroSectionProps) {
+function DeckHeroSection({ deck, cards, states, onOpenImportModal }: DeckHeroSectionProps) {
   const navigate = useNavigate();
   const [t] = useTranslation();
 

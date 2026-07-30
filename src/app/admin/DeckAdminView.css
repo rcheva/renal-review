@@ -1,0 +1,134 @@
+.deck-admin-view {
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: 24px 0 60px;
+}
+
+.deck-admin-view__header {
+  margin-bottom: 24px;
+}
+
+.deck-admin-view__title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.deck-admin-view__subtitle {
+  color: var(--theme-neutral-500);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.deck-admin-view__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.deck-admin-view__stat-card {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deck-admin-view__stat-val {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--theme-primary-600, #0284c7);
+}
+
+.deck-admin-view__stat-lbl {
+  font-size: 0.825rem;
+  color: var(--theme-neutral-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.deck-admin-view__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.deck-admin-view__filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.deck-admin-view__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.deck-admin-view__table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+}
+
+.deck-admin-view__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.deck-admin-view__table th {
+  background-color: var(--theme-neutral-100);
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--theme-neutral-700);
+  border-bottom: 1px solid var(--theme-neutral-200);
+}
+
+.deck-admin-view__table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--theme-neutral-200);
+  vertical-align: middle;
+}
+
+.deck-admin-view__table tbody tr:hover {
+  background-color: var(--theme-neutral-50);
+}
+
+.deck-admin-view__deck-link {
+  font-weight: 600;
+  color: var(--theme-primary-600, #0284c7);
+  text-decoration: none;
+}
+
+.deck-admin-view__deck-link:hover {
+  text-decoration: underline;
+}
+
+.deck-admin-view__badge-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.deck-admin-view__badge-parent {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.deck-admin-view__badge-subdeck {
+  background-color: #fef3c7;
+  color: #92400e;
+}

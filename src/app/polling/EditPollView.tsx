@@ -25,7 +25,7 @@ import {
 import parse from "html-react-parser";
 import { convert } from "html-to-text";
 import { QRCodeSVG } from "qrcode.react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, Question } from "./types";
@@ -87,16 +87,47 @@ export default function EditPollView() {
   };
 
   // AI Import State
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiDeckId, setAiDeckId] = useState<string>("");
   const [aiJsonText, setAiJsonText] = useState("");
   const [aiParseError, setAiParseError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [detectedCount, setDetectedCount] = useState(0);
 
   const [decks] = useAllDecks();
-
   const aiSelectedDeck = decks?.find((d) => d.id === aiDeckId) || undefined;
   const [aiNotes] = useNotesOf(aiSelectedDeck);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        let textToParse = content.trim();
+        if (textToParse.startsWith("```json")) textToParse = textToParse.replace(/```json/g, "");
+        if (textToParse.startsWith("```")) textToParse = textToParse.replace(/```/g, "");
+        if (textToParse.endsWith("```")) textToParse = textToParse.slice(0, -3);
+
+        const parsed = JSON.parse(textToParse);
+        if (!Array.isArray(parsed)) throw new Error("JSON document must contain an array of question objects.");
+
+        setAiJsonText(textToParse);
+        setUploadedFileName(file.name);
+        setDetectedCount(parsed.length);
+        setAiParseError("");
+      } catch (err: any) {
+        setAiParseError("Failed to parse JSON file: " + err.message);
+        setUploadedFileName("");
+        setDetectedCount(0);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   useEffect(() => {
     if (pollId) {
@@ -825,54 +856,119 @@ Here are the flashcards:\n\n`;
 
         <Modal
           opened={isAiModalOpen}
-          onClose={() => setIsAiModalOpen(false)}
-          title="Import via AI Workflow"
+          onClose={() => {
+            setIsAiModalOpen(false);
+            setUploadedFileName("");
+            setDetectedCount(0);
+          }}
+          title="Import Quiz Questions (JSON)"
         >
           <div
             style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
-            <p
+            {/* Option 1: File Upload from Browser */}
+            <div
               style={{
-                margin: 0,
-                fontSize: "0.875rem",
-                color: "var(--theme-neutral-500)",
+                border: "2px dashed var(--theme-primary-500, #0284c7)",
+                borderRadius: "10px",
+                padding: "16px",
+                textAlign: "center",
+                background: "var(--theme-primary-50, #f0f9ff)",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
               }}
+              onClick={() => fileInputRef.current?.click()}
             >
-              Step 1: Select a deck and copy the prompt.
-              <br />
-              Step 2: Paste the prompt into an AI like ChatGPT or Claude.
-              <br />
-              Step 3: Paste the raw JSON response below.
-            </p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={handleFileUpload}
+              />
+              <div
+                style={{
+                  color: "var(--theme-primary-600, #0284c7)",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  marginBottom: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                }}
+              >
+                📁 Click to Upload JSON File (.json)
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--theme-neutral-500)" }}>
+                Select a .json file generated from ChatGPT, Claude, or Skola AI
+              </div>
+            </div>
 
-            <Select
-              label="Select Deck (for prompt generation)"
-              value={aiDeckId}
-              onChange={(val) => setAiDeckId(val || "")}
-              options={(decks || []).map((d) => ({
-                value: d.id,
-                label: `${d.name} (${d.notes?.length || 0} cards)`,
-              }))}
-            />
+            {/* Confirmation Banner when file is selected & uploaded */}
+            {uploadedFileName && (
+              <div
+                style={{
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  color: "#047857",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span style={{ fontSize: "16px" }}>✅</span>
+                <span>
+                  Successfully loaded file <strong>"{uploadedFileName}"</strong> ({detectedCount} questions detected)
+                </span>
+              </div>
+            )}
 
-            <Button
-              variant="default"
-              leftSection={<IconCopy size={16} />}
-              disabled={!aiDeckId || aiNotes?.length === 0}
-              onClick={handleCopyAiPrompt}
-            >
-              Copy Prompt to Clipboard
-            </Button>
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "2px 0" }}>
+              <div style={{ flex: 1, height: "1px", background: "var(--theme-neutral-300)" }} />
+              <span style={{ fontSize: "11px", color: "var(--theme-neutral-500)", fontWeight: 600 }}>
+                OR PASTE JSON / COPY PROMPT
+              </span>
+              <div style={{ flex: 1, height: "1px", background: "var(--theme-neutral-300)" }} />
+            </div>
+
+            {/* Deck Prompt Generator */}
+            <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
+                <Select
+                  label="Select Deck (for prompt generation)"
+                  value={aiDeckId}
+                  onChange={(val) => setAiDeckId(val || "")}
+                  options={(decks || []).map((d) => ({
+                    value: d.id,
+                    label: `${d.name} (${d.notes?.length || 0} cards)`,
+                  }))}
+                />
+              </div>
+              <Button
+                variant="default"
+                leftSection={<IconCopy size={16} />}
+                disabled={!aiDeckId || aiNotes?.length === 0}
+                onClick={handleCopyAiPrompt}
+              >
+                Copy Prompt
+              </Button>
+            </div>
 
             <Textarea
-              label="Paste AI JSON Output"
+              label="Paste AI JSON Output or Edit Loaded Content"
               placeholder='[\n  {\n    "question_text": "...",\n    "options": [...],\n    "correct_option_index": 0\n  }\n]'
               value={aiJsonText}
               onChange={(e) => {
                 setAiJsonText(e.target.value);
                 setAiParseError("");
               }}
-              style={{ minHeight: "200px" }}
+              style={{ minHeight: "160px" }}
             />
 
             {aiParseError && (
@@ -901,7 +997,11 @@ Here are the flashcards:\n\n`;
                 onClick={handleParseAiJson}
                 disabled={!aiJsonText.trim() || isImporting}
               >
-                Parse and Add Questions
+                {isImporting
+                  ? "Importing..."
+                  : detectedCount > 0
+                  ? `Import ${detectedCount} Questions`
+                  : "Parse and Add Questions"}
               </Button>
             </div>
           </div>

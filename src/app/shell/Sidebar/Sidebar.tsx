@@ -8,6 +8,7 @@ import {
   IconChartBar,
   IconHome,
   IconSettings,
+  IconShieldCheck,
   IconTrophy,
   IconX,
 } from "@tabler/icons-react";
@@ -124,6 +125,13 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
             /> */}
+            <NavItem
+              label={"Administration"}
+              path="/admin"
+              icon={<IconShieldCheck />}
+              collapsed={minimalMode}
+              onClick={fullscreenMode ? menuHandlers.close : undefined}
+            />
             <NavItem
               label={t("settings.title")}
               path="/settings"

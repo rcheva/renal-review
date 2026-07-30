@@ -1,3 +1,4 @@
+import React, { useState, useRef } from "react";
 import {
   Button,
   Modal,
@@ -6,13 +7,11 @@ import {
   TextInput,
   Textarea,
 } from "@/components/ui";
-import { Tabs } from "@/components/ui/Tabs";
 import { isTauri } from "@/lib/isTauri";
 import { db } from "@/logic/db";
 import { Deck, MaterialType, StudyMaterial } from "@/logic/deck/deck";
-import { BasicNoteTypeAdapter } from "@/logic/type-implementations/normal/BasicNote";
-import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { saveStudyMaterialToOneDrive } from "@/logic/oneDriveSync";
 
 interface AddMaterialModalProps {
   deck: Deck;
@@ -21,8 +20,8 @@ interface AddMaterialModalProps {
 }
 
 const MATERIAL_TYPES = [
-  { value: "doc", label: "Document (PDF/Link)" },
-  { value: "resume", label: "Study Guide / Resume" },
+  { value: "doc", label: "Document (PDF/HTML/Link)" },
+  { value: "resume", label: "Study Guide / Summary" },
   { value: "ppt", label: "Slide Deck" },
   { value: "video", label: "Video Overview" },
   { value: "audio", label: "Audio Overview / Podcast" },
@@ -34,22 +33,48 @@ export default function AddMaterialModal({
   opened,
   onClose,
 }: AddMaterialModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [title, setTitle] = useState("");
   const [type, setType] = useState<MaterialType>("doc");
   const [url, setUrl] = useState("");
   const [content, setContent] = useState("");
 
-  const [jsonText, setJsonText] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
-
   const handleSave = async () => {
     if (!title.trim()) return;
+
+    // Find parent topic name
+    let parentTopicName = "Miscellaneous";
+    if (deck.superDecks && deck.superDecks.length > 0) {
+      const parentId = deck.superDecks[deck.superDecks.length - 1];
+      const parentDeck = await db.decks.get(parentId);
+      if (parentDeck) parentTopicName = parentDeck.name;
+    }
+
+    const fileName = title.trim().endsWith(".pdf") || title.trim().endsWith(".html")
+      ? title.trim()
+      : `${title.trim()}.txt`;
+
+    let finalUrl = url.trim();
+
+    // Copy or write file to OneDrive folder structure
+    if (finalUrl || content.trim()) {
+      const savedOneDrivePath = await saveStudyMaterialToOneDrive(
+        parentTopicName,
+        deck.name,
+        fileName,
+        finalUrl || content.trim()
+      );
+      if (savedOneDrivePath) {
+        finalUrl = savedOneDrivePath;
+      }
+    }
 
     const newMaterial: StudyMaterial = {
       id: uuidv4(),
       title: title.trim(),
       type,
-      url: url.trim() || undefined,
+      url: finalUrl || undefined,
       content: content.trim() || undefined,
       createdAt: new Date(),
     };
@@ -70,189 +95,116 @@ export default function AddMaterialModal({
 
   const handleBrowseFile = async () => {
     try {
-      if (!isTauri()) {
-        alert(
-          "Selecting local files is only available in the Mac Desktop app."
-        );
-        return;
-      }
-      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
-      const selectedPath = await openDialog({
-        multiple: false,
-        directory: false,
-        defaultPath:
-          "/Users/julio/Library/CloudStorage/OneDrive-Personal/renal review",
-      });
-      if (selectedPath && typeof selectedPath === "string") {
-        setUrl(selectedPath);
-        if (!title.trim()) {
-          // Autocomplete title from filename if empty
-          const filename = selectedPath.split(/[/\\]/).pop() || "";
-          setTitle(filename);
+      if (isTauri()) {
+        const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
+        const selectedPath = await openDialog({
+          multiple: false,
+          directory: false,
+          defaultPath:
+            "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review",
+        });
+        if (selectedPath && typeof selectedPath === "string") {
+          setUrl(selectedPath);
+          if (!title.trim()) {
+            const filename = selectedPath.split(/[/\\]/).pop() || "";
+            setTitle(filename);
+          }
         }
+      } else {
+        fileInputRef.current?.click();
       }
     } catch (err) {
       console.error("Failed to open file dialog", err);
+      fileInputRef.current?.click();
     }
   };
 
-  const handleImportJson = async () => {
-    if (!jsonText.trim()) return;
-    try {
-      setIsImporting(true);
-      const parsed = JSON.parse(jsonText);
-      if (!Array.isArray(parsed)) {
-        throw new Error("JSON must be an array of flashcards.");
+  const handleHTMLFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const oneDrivePath = `/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/${file.name}`;
+      setUrl(oneDrivePath);
+      if (!title.trim()) {
+        setTitle(file.name);
       }
-
-      for (const card of parsed) {
-        if (!card.question || !card.correct_answer) {
-          console.warn("Skipping invalid card format", card);
-          continue;
-        }
-
-        let backText = `<p>${card.correct_answer}</p>`;
-        if (
-          card.incorrect_answers &&
-          Array.isArray(card.incorrect_answers) &&
-          card.incorrect_answers.length > 0
-        ) {
-          backText += `<br/><p><b>Incorrect options:</b></p><ul>`;
-          for (const wrong of card.incorrect_answers) {
-            backText += `<li>${wrong}</li>`;
-          }
-          backText += `</ul>`;
-        }
-
-        await BasicNoteTypeAdapter.createNote(
-          {
-            front: card.question,
-            back: backText,
-          },
-          deck
-        );
-      }
-
-      setJsonText("");
-      onClose();
-      alert(`Successfully imported ${parsed.length} flashcards!`);
-    } catch (err: any) {
-      alert("Failed to parse or import JSON: " + err.message);
-    } finally {
-      setIsImporting(false);
     }
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Add Material to Deck">
-      <Tabs defaultValue="resource">
-        <Tabs.List>
-          <Tabs.Tab value="resource">Study Material</Tabs.Tab>
-          <Tabs.Tab value="json">Import Flashcards</Tabs.Tab>
-        </Tabs.List>
+    <Modal opened={opened} onClose={onClose} title="Add Study Material to Deck">
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleHTMLFileSelected}
+      />
 
-        <Tabs.Panel value="resource">
-          <Stack gap="md" style={{ marginTop: "var(--spacing-md)" }}>
+      <Stack gap="md" style={{ marginTop: "var(--spacing-md)" }}>
+        <TextInput
+          label="Title"
+          placeholder="e.g. Spasovski 2026 Hyponatremia Review"
+          value={title}
+          onChange={(e) => setTitle(e.currentTarget.value)}
+          required
+          autoFocus
+        />
+
+        <Select
+          label="Material Type"
+          options={MATERIAL_TYPES}
+          value={type}
+          onChange={(val) => setType(val as MaterialType)}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: "var(--spacing-sm)",
+          }}
+        >
+          <div style={{ flex: 1 }}>
             <TextInput
-              label="Title"
-              placeholder="e.g. KDIGO 2024 CKD Guidelines Summary"
-              value={title}
-              onChange={(e) => setTitle(e.currentTarget.value)}
-              required
+              label="OneDrive Path / Resource URL"
+              placeholder="/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/..."
+              description="Points to document location in your OneDrive folder"
+              value={url}
+              onChange={(e) => setUrl(e.currentTarget.value)}
             />
+          </div>
+          <Button
+            variant="subtle"
+            onClick={handleBrowseFile}
+            style={{ marginBottom: "var(--spacing-md)" }}
+          >
+            📁 Browse...
+          </Button>
+        </div>
 
-            <Select
-              label="Material Type"
-              options={MATERIAL_TYPES}
-              value={type}
-              onChange={(val) => setType(val as MaterialType)}
-            />
+        <Textarea
+          label="Text Content or Summary Notes (Optional)"
+          placeholder="Paste key notes, executive summary, or markdown notes here..."
+          value={content}
+          onChange={(e) => setContent(e.currentTarget.value)}
+          minRows={5}
+        />
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: "var(--spacing-sm)",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <TextInput
-                  label="Resource URL or Local Path"
-                  placeholder="https://... or /Users/..."
-                  description="Paste the link or the local absolute path to your file"
-                  value={url}
-                  onChange={(e) => setUrl(e.currentTarget.value)}
-                />
-              </div>
-              <Button
-                variant="subtle"
-                onClick={handleBrowseFile}
-                style={{ marginBottom: "var(--spacing-md)" }}
-              >
-                Browse...
-              </Button>
-            </div>
-
-            <Textarea
-              label="Text Content (Optional)"
-              placeholder="Paste markdown or raw text here if you don't have a URL..."
-              description="Good for pasted Study Guides or Briefing Docs"
-              value={content}
-              onChange={(e) => setContent(e.currentTarget.value)}
-              minRows={5}
-            />
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "var(--spacing-md)",
-                marginTop: "var(--spacing-md)",
-              }}
-            >
-              <Button variant="subtle" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={!title.trim()}>
-                Save Material
-              </Button>
-            </div>
-          </Stack>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="json">
-          <Stack gap="md" style={{ marginTop: "var(--spacing-md)" }}>
-            <Textarea
-              label="Flashcards JSON"
-              placeholder={
-                '[\n  {\n    "question": "...",\n    "correct_answer": "..."\n  }\n]'
-              }
-              description="Paste an array of flashcards generated by an LLM."
-              value={jsonText}
-              onChange={(e) => setJsonText(e.currentTarget.value)}
-              minRows={10}
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "var(--spacing-md)",
-                marginTop: "var(--spacing-md)",
-              }}
-            >
-              <Button variant="subtle" onClick={onClose} disabled={isImporting}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleImportJson}
-                disabled={!jsonText.trim() || isImporting}
-              >
-                {isImporting ? "Importing..." : "Import Flashcards"}
-              </Button>
-            </div>
-          </Stack>
-        </Tabs.Panel>
-      </Tabs>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "var(--spacing-md)",
+            marginTop: "var(--spacing-md)",
+          }}
+        >
+          <Button variant="subtle" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!title.trim()}>
+            Save Study Material
+          </Button>
+        </div>
+      </Stack>
     </Modal>
   );
 }

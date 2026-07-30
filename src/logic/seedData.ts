@@ -12,6 +12,8 @@ const topics = [
   "Genetics / Rare",
   "Guidelines",
   "RCT",
+  "Miscellaneous",
+  "GIM",
 ];
 
 const ckdQuestions = [
