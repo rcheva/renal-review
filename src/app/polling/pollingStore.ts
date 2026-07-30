@@ -181,3 +181,103 @@ export async function deleteStudent(studentId: string, studentCode?: string): Pr
 
   return true;
 }
+
+// Offline Queueing & Auto-Sync Engine
+const OFFLINE_QUEUE_KEY = "renal_pending_offline_responses";
+const CACHED_POLLS_KEY = "renal_cached_polls";
+const CACHED_QUESTIONS_KEY = "renal_cached_questions";
+
+export interface PendingResponse {
+  id: string;
+  question_id: string;
+  selected_option_index: number;
+  respondent_name: string | null;
+  hospital: string | null;
+  student_id: string | null;
+  is_correct: boolean;
+  created_at: string;
+}
+
+export function queueOfflineResponse(payload: Omit<PendingResponse, "id" | "created_at">): PendingResponse {
+  const item: PendingResponse = {
+    ...payload,
+    id: "offline_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+    created_at: new Date().toISOString(),
+  };
+
+  const existing = getOfflineResponsesQueue();
+  const updated = [...existing, item];
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated));
+  return item;
+}
+
+export function getOfflineResponsesQueue(): PendingResponse[] {
+  const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function flushOfflineResponsesQueue(): Promise<number> {
+  const queue = getOfflineResponsesQueue();
+  if (queue.length === 0) return 0;
+
+  let syncedCount = 0;
+  const remaining: PendingResponse[] = [];
+
+  for (const item of queue) {
+    try {
+      const payload = {
+        question_id: item.question_id,
+        selected_option_index: item.selected_option_index,
+        respondent_name: item.respondent_name,
+        hospital: item.hospital,
+        student_id: item.student_id,
+        is_correct: item.is_correct,
+        created_at: item.created_at,
+      };
+
+      const { error } = await supabase.from("responses").insert([payload]);
+      if (!error) {
+        syncedCount++;
+      } else {
+        remaining.push(item);
+      }
+    } catch {
+      remaining.push(item);
+    }
+  }
+
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
+  return syncedCount;
+}
+
+export function cachePollAndQuestions(poll: any, questions: any[]): void {
+  try {
+    const pollsMap = JSON.parse(localStorage.getItem(CACHED_POLLS_KEY) || "{}");
+    pollsMap[poll.id] = poll;
+    localStorage.setItem(CACHED_POLLS_KEY, JSON.stringify(pollsMap));
+
+    const questionsMap = JSON.parse(localStorage.getItem(CACHED_QUESTIONS_KEY) || "{}");
+    questionsMap[poll.id] = questions;
+    localStorage.setItem(CACHED_QUESTIONS_KEY, JSON.stringify(questionsMap));
+  } catch {
+    // ignore
+  }
+}
+
+export function getCachedPollAndQuestions(pollId: string): { poll: any | null; questions: any[] } {
+  try {
+    const pollsMap = JSON.parse(localStorage.getItem(CACHED_POLLS_KEY) || "{}");
+    const questionsMap = JSON.parse(localStorage.getItem(CACHED_QUESTIONS_KEY) || "{}");
+    return {
+      poll: pollsMap[pollId] || null,
+      questions: questionsMap[pollId] || [],
+    };
+  } catch {
+    return { poll: null, questions: [] };
+  }
+}

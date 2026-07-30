@@ -1,12 +1,19 @@
 import { Button, Paper } from "@/components/ui";
 import { supabase } from "@/logic/supabase";
-import { IconCheck, IconDownload } from "@tabler/icons-react";
+import { IconCheck, IconDownload, IconWifi, IconWifiOff, IconCloudUpload } from "@tabler/icons-react";
 import parse from "html-react-parser";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Poll, Question, Student } from "./types";
 import StudentAuthModal from "./StudentAuthModal";
-import { getCurrentSessionStudent } from "./pollingStore";
+import {
+  getCurrentSessionStudent,
+  queueOfflineResponse,
+  flushOfflineResponsesQueue,
+  getOfflineResponsesQueue,
+  cachePollAndQuestions,
+  getCachedPollAndQuestions,
+} from "./pollingStore";
 
 export default function StudentPollView() {
   const { pollId } = useParams();
@@ -26,6 +33,44 @@ export default function StudentPollView() {
     Record<string, number>
   >({});
   const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState<number>(0);
+  const [offlineNotice, setOfflineNotice] = useState<string>("");
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      const synced = await flushOfflineResponsesQueue();
+      if (synced > 0) {
+        setOfflineNotice(`✅ Automatically synced ${synced} offline answer(s) to cloud!`);
+        setTimeout(() => setOfflineNotice(""), 4000);
+      }
+      setPendingOfflineCount(getOfflineResponsesQueue().length);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    setPendingOfflineCount(getOfflineResponsesQueue().length);
+
+    if (navigator.onLine) {
+      flushOfflineResponsesQueue().then((synced) => {
+        if (synced > 0) {
+          setOfflineNotice(`✅ Synced ${synced} pending offline answer(s)`);
+          setTimeout(() => setOfflineNotice(""), 4000);
+        }
+        setPendingOfflineCount(getOfflineResponsesQueue().length);
+      });
+    }
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (activeStudent) {
@@ -56,23 +101,42 @@ export default function StudentPollView() {
   }, [currentQuestionIndex, questions]);
 
   const fetchData = async () => {
-    const { data: pollData, error: pollError } = await supabase
-      .from("polls")
-      .select("*")
-      .eq("id", pollId)
-      .single();
-    if (pollError || !pollData) {
-      setError("Poll not found.");
-      return;
-    }
-    setPoll(pollData as Poll);
+    if (!pollId) return;
 
-    const { data: questionData } = await supabase
-      .from("questions")
-      .select("*")
-      .eq("poll_id", pollId)
-      .order("created_at", { ascending: true });
-    if (questionData) setQuestions(questionData as Question[]);
+    try {
+      const { data: pollData, error: pollError } = await supabase
+        .from("polls")
+        .select("*")
+        .eq("id", pollId)
+        .single();
+
+      if (!pollError && pollData) {
+        setPoll(pollData as Poll);
+
+        const { data: questionData } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("poll_id", pollId)
+          .order("created_at", { ascending: true });
+
+        if (questionData) {
+          setQuestions(questionData as Question[]);
+          cachePollAndQuestions(pollData, questionData);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // Offline / Network Fallback
+    const cached = getCachedPollAndQuestions(pollId);
+    if (cached.poll) {
+      setPoll(cached.poll);
+      setQuestions(cached.questions);
+    } else {
+      setError("Poll not found or offline cache unavailable.");
+    }
   };
 
   const handleOptionClick = async (originalIndex: number) => {
@@ -93,10 +157,22 @@ export default function StudentPollView() {
       is_correct: isCorrect,
     };
 
-    try {
-      await supabase.from("responses").insert([responsePayload]);
-    } catch (e) {
-      console.warn("Could not insert response into Supabase", e);
+    let savedToCloud = false;
+
+    if (navigator.onLine) {
+      try {
+        const { error: insErr } = await supabase.from("responses").insert([responsePayload]);
+        if (!insErr) savedToCloud = true;
+      } catch (e) {
+        console.warn("Could not insert response into Supabase", e);
+      }
+    }
+
+    if (!savedToCloud) {
+      queueOfflineResponse(responsePayload);
+      setPendingOfflineCount(getOfflineResponsesQueue().length);
+      setOfflineNotice("⚡ Saved offline! Will sync automatically when connection restores.");
+      setTimeout(() => setOfflineNotice(""), 3500);
     }
 
     // Always preserve local backup of responses for leaderboard & reports fallback
@@ -528,6 +604,7 @@ export default function StudentPollView() {
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100vh",
@@ -535,6 +612,57 @@ export default function StudentPollView() {
         padding: "1rem",
       }}
     >
+      {/* Offline Network Status Banner */}
+      {(!isOnline || pendingOfflineCount > 0 || offlineNotice) && (
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 640,
+            padding: "10px 16px",
+            borderRadius: "10px",
+            marginBottom: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: !isOnline
+              ? "#fff7ed"
+              : pendingOfflineCount > 0
+              ? "#eff6ff"
+              : "#f0fdf4",
+            border: !isOnline
+              ? "1px solid #fdba74"
+              : pendingOfflineCount > 0
+              ? "1px solid #93c5fd"
+              : "1px solid #86efac",
+            color: !isOnline
+              ? "#c2410c"
+              : pendingOfflineCount > 0
+              ? "#1d4ed8"
+              : "#15803d",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {!isOnline ? (
+              <IconWifiOff size={18} color="#c2410c" />
+            ) : pendingOfflineCount > 0 ? (
+              <IconCloudUpload size={18} color="#1d4ed8" />
+            ) : (
+              <IconWifi size={18} color="#15803d" />
+            )}
+            <span>
+              {offlineNotice ||
+                (!isOnline
+                  ? `Offline Mode — Answers saved locally (${pendingOfflineCount} queued)`
+                  : pendingOfflineCount > 0
+                  ? `Syncing ${pendingOfflineCount} offline response(s) to cloud...`
+                  : "Online — All responses synced")}
+            </span>
+          </div>
+        </div>
+      )}
+
       <Paper
         key={q.id}
         withBorder
