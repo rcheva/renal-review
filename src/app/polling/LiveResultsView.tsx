@@ -16,11 +16,14 @@ import {
   IconMoon,
   IconSun,
   IconCheck,
+  IconMaximize,
+  IconMinimize,
 } from "@tabler/icons-react";
 import parse from "html-react-parser";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { KidneyMedal } from "./KidneyMedal";
 import {
   Bar,
   BarChart,
@@ -47,6 +50,22 @@ export default function LiveResultsView() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [hideLiveVotes, setHideLiveVotes] = useState(false);
   const [revealRationaleMap, setRevealRationaleMap] = useState<Record<string, boolean>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement && !isFullscreen) {
+      if (containerRef.current?.requestFullscreen) {
+        containerRef.current.requestFullscreen().catch(() => setIsFullscreen(true));
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      setIsFullscreen(false);
+    }
+  };
 
   // Countdown Timer State
   const [timerDuration, setTimerDuration] = useState<number>(60);
@@ -167,22 +186,33 @@ export default function LiveResultsView() {
   const timerPercent = (timeLeft / timerDuration) * 100;
 
   return (
-    <div className={isDarkMode ? "dark-presenter-mode" : ""}>
-      <AppHeaderContent>
-        <AppBreadcrumbs
-          segments={[
-            { label: "Live Polling", path: "/polling" },
-            { label: `${poll.title} - Presenter View` },
-          ]}
-        />
-      </AppHeaderContent>
+    <div
+      ref={containerRef}
+      className={isDarkMode ? "dark-presenter-mode" : ""}
+      style={{
+        minHeight: isFullscreen ? "100vh" : "auto",
+        background: isDarkMode ? "#0f172a" : isFullscreen ? "#f8fafc" : "transparent",
+        padding: isFullscreen ? "2rem" : "0",
+        overflowY: isFullscreen ? "auto" : "visible",
+      }}
+    >
+      {!isFullscreen && (
+        <AppHeaderContent>
+          <AppBreadcrumbs
+            segments={[
+              { label: "Live Polling", path: "/polling" },
+              { label: `${poll.title} - Presenter View` },
+            ]}
+          />
+        </AppHeaderContent>
+      )}
 
       <div
         style={{
           width: "100%",
-          maxWidth: "var(--max-content-width)",
+          maxWidth: isFullscreen ? "100%" : "1400px",
           margin: "0 auto",
-          padding: "20px 1rem",
+          padding: isFullscreen ? "0" : "20px 1.5rem",
         }}
       >
         {/* Header Bar */}
@@ -198,7 +228,7 @@ export default function LiveResultsView() {
         >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h1 style={{ fontFamily: "var(--font-serif)", margin: 0, fontSize: "1.8rem" }}>
+              <h1 style={{ fontFamily: "var(--font-serif)", margin: 0, fontSize: isFullscreen ? "2.2rem" : "1.8rem" }}>
                 {poll.title}
               </h1>
               <span
@@ -212,13 +242,21 @@ export default function LiveResultsView() {
                 {poll.status === "active" ? "LIVE VOTING OPEN" : "POLL CLOSED"}
               </span>
             </div>
-            <p style={{ margin: "4px 0 0 0", color: isDarkMode ? "#94a3b8" : "#64748b", fontSize: "0.9rem" }}>
+            <p style={{ margin: "4px 0 0 0", color: isDarkMode ? "#94a3b8" : "#64748b", fontSize: "0.95rem" }}>
               Category: <strong>{poll.group_name || "Renal"}</strong> • Total Responses: <strong>{responses.length}</strong>
             </p>
           </div>
 
           {/* Action Toolbar */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              variant="default"
+              leftSection={isFullscreen ? <IconMinimize size={18} /> : <IconMaximize size={18} />}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? "Exit Full Screen" : "Full Screen Mode"}
+            </Button>
+
             <Button
               variant="default"
               leftSection={isDarkMode ? <IconSun size={18} color="#f59e0b" /> : <IconMoon size={18} />}
@@ -246,6 +284,24 @@ export default function LiveResultsView() {
               {poll.status === "active" ? "Close Voting" : "Open Voting"}
             </Button>
           </div>
+        </div>
+
+        {/* View Switcher Tabs */}
+        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          <Button
+            variant={activeTab === "charts" ? "default" : "subtle"}
+            onClick={() => setActiveTab("charts")}
+            leftSection={<IconChartBar size={18} />}
+          >
+            Questions & Live Charts
+          </Button>
+          <Button
+            variant={activeTab === "leaderboard" ? "default" : "subtle"}
+            onClick={() => setActiveTab("leaderboard")}
+            leftSection={<IconTrophy size={18} color="#eab308" />}
+          >
+            Kidney Medal Leaderboard {poll.status === "closed" ? "🏆 (Poll Closed)" : ""}
+          </Button>
         </div>
 
         {/* Presenter Countdown Timer Card */}
@@ -645,9 +701,14 @@ export default function LiveResultsView() {
                     marginBottom: "1.5rem",
                   }}
                 >
-                  <h2 style={{ margin: 0, color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
-                    Live Participant Leaderboard
-                  </h2>
+                  <div>
+                    <h2 style={{ margin: 0, color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                      🏆 Live Participant Leaderboard & Kidney Medals
+                    </h2>
+                    <p style={{ margin: "4px 0 0 0", color: isDarkMode ? "#94a3b8" : "#64748b", fontSize: "0.85rem" }}>
+                      Top 3 performers receive Gold, Silver, and Bronze Kidney Medals based on total score and accuracy.
+                    </p>
+                  </div>
                 </div>
 
                 {leaderboard.length === 0 ? (
@@ -655,41 +716,160 @@ export default function LiveResultsView() {
                     No participant answers submitted yet.
                   </p>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
-                    <thead>
-                      <tr
-                        style={{
-                          borderBottom: isDarkMode ? "1px solid #334155" : "2px solid #e2e8f0",
-                          color: isDarkMode ? "#94a3b8" : "#64748b",
-                        }}
-                      >
-                        <th style={{ padding: "12px 16px" }}>Rank</th>
-                        <th style={{ padding: "12px 16px" }}>Participant Name</th>
-                        <th style={{ padding: "12px 16px" }}>Hospital / Group</th>
-                        <th style={{ padding: "12px 16px" }}>Score</th>
-                        <th style={{ padding: "12px 16px" }}>Total Answered</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboard.map((p, idx) => (
+                  <>
+                    {/* Kidney Medals Podium */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "flex-end",
+                        gap: "1.5rem",
+                        margin: "1.5rem 0 2.5rem 0",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {/* Silver #2 */}
+                      {leaderboard[1] && (
+                        <div style={{ textAlign: "center", width: "210px" }}>
+                          <div style={{ marginBottom: "8px" }}>
+                            <KidneyMedal rank={2} size={64} />
+                          </div>
+                          <div
+                            style={{
+                              background: isDarkMode
+                                ? "linear-gradient(180deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.8) 100%)"
+                                : "linear-gradient(180deg, rgba(241, 245, 249, 0.9) 0%, rgba(203, 213, 225, 0.4) 100%)",
+                              borderRadius: "14px",
+                              padding: "1.1rem",
+                              border: "1px solid #94a3b8",
+                              boxShadow: "0 8px 20px rgba(148, 163, 184, 0.2)",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#94a3b8", letterSpacing: "1px" }}>
+                              🥈 2ND PLACE
+                            </div>
+                            <div style={{ fontWeight: 800, fontSize: "1.15rem", marginTop: "4px", color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                              {leaderboard[1].name}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: isDarkMode ? "#cbd5e1" : "#64748b" }}>
+                              {leaderboard[1].hospital}
+                            </div>
+                            <div style={{ marginTop: "8px", fontWeight: 800, color: "#2563eb", fontSize: "1.25rem" }}>
+                              {leaderboard[1].score} / {questions.length}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Gold #1 */}
+                      {leaderboard[0] && (
+                        <div style={{ textAlign: "center", width: "240px" }}>
+                          <div style={{ marginBottom: "8px" }}>
+                            <KidneyMedal rank={1} size={84} />
+                          </div>
+                          <div
+                            style={{
+                              background: isDarkMode
+                                ? "linear-gradient(180deg, rgba(133, 77, 14, 0.5) 0%, rgba(30, 41, 59, 0.9) 100%)"
+                                : "linear-gradient(180deg, rgba(254, 240, 138, 0.8) 0%, rgba(253, 224, 71, 0.3) 100%)",
+                              borderRadius: "16px",
+                              padding: "1.25rem",
+                              border: "2px solid #eab308",
+                              boxShadow: "0 12px 30px rgba(234, 179, 8, 0.3)",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.85rem", fontWeight: 900, color: "#ca8a04", letterSpacing: "1px" }}>
+                              🏆 1ST PLACE GOLD
+                            </div>
+                            <div style={{ fontWeight: 900, fontSize: "1.3rem", marginTop: "4px", color: isDarkMode ? "#fef08a" : "#0f172a" }}>
+                              {leaderboard[0].name}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: isDarkMode ? "#fde047" : "#854d0e" }}>
+                              {leaderboard[0].hospital}
+                            </div>
+                            <div style={{ marginTop: "10px", fontWeight: 900, color: "#eab308", fontSize: "1.4rem" }}>
+                              {leaderboard[0].score} / {questions.length} ({Math.round((leaderboard[0].score / (questions.length || 1)) * 100)}%)
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bronze #3 */}
+                      {leaderboard[2] && (
+                        <div style={{ textAlign: "center", width: "210px" }}>
+                          <div style={{ marginBottom: "8px" }}>
+                            <KidneyMedal rank={3} size={58} />
+                          </div>
+                          <div
+                            style={{
+                              background: isDarkMode
+                                ? "linear-gradient(180deg, rgba(120, 53, 15, 0.5) 0%, rgba(30, 41, 59, 0.8) 100%)"
+                                : "linear-gradient(180deg, rgba(254, 215, 170, 0.8) 0%, rgba(251, 146, 60, 0.3) 100%)",
+                              borderRadius: "14px",
+                              padding: "1.1rem",
+                              border: "1px solid #d97706",
+                              boxShadow: "0 8px 20px rgba(217, 119, 6, 0.2)",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#d97706", letterSpacing: "1px" }}>
+                              🥉 3RD PLACE
+                            </div>
+                            <div style={{ fontWeight: 800, fontSize: "1.15rem", marginTop: "4px", color: isDarkMode ? "#ffedd5" : "#0f172a" }}>
+                              {leaderboard[2].name}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: isDarkMode ? "#fed7aa" : "#92400e" }}>
+                              {leaderboard[2].hospital}
+                            </div>
+                            <div style={{ marginTop: "8px", fontWeight: 800, color: "#d97706", fontSize: "1.25rem" }}>
+                              {leaderboard[2].score} / {questions.length}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+                      <thead>
                         <tr
-                          key={idx}
                           style={{
-                            borderBottom: isDarkMode ? "1px solid #1e293b" : "1px solid #f1f5f9",
-                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                            borderBottom: isDarkMode ? "1px solid #334155" : "2px solid #e2e8f0",
+                            color: isDarkMode ? "#94a3b8" : "#64748b",
                           }}
                         >
-                          <td style={{ padding: "12px 16px", fontWeight: 700 }}>#{idx + 1}</td>
-                          <td style={{ padding: "12px 16px", fontWeight: 600 }}>{p.name}</td>
-                          <td style={{ padding: "12px 16px" }}>{p.hospital}</td>
-                          <td style={{ padding: "12px 16px", fontWeight: 700, color: "#10b981" }}>{p.score}</td>
-                          <td style={{ padding: "12px 16px", color: isDarkMode ? "#94a3b8" : "#64748b" }}>
-                            {p.totalAnswered}
-                          </td>
+                          <th style={{ padding: "12px 16px" }}>Rank</th>
+                          <th style={{ padding: "12px 16px" }}>Participant Name</th>
+                          <th style={{ padding: "12px 16px" }}>Hospital / Group</th>
+                          <th style={{ padding: "12px 16px" }}>Score</th>
+                          <th style={{ padding: "12px 16px" }}>Total Answered</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {leaderboard.map((p, idx) => {
+                          const r = idx + 1;
+                          return (
+                            <tr
+                              key={idx}
+                              style={{
+                                borderBottom: isDarkMode ? "1px solid #1e293b" : "1px solid #f1f5f9",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                background: r === 1 ? "rgba(234, 179, 8, 0.08)" : r === 2 ? "rgba(148, 163, 184, 0.08)" : r === 3 ? "rgba(217, 119, 6, 0.08)" : "transparent",
+                              }}
+                            >
+                              <td style={{ padding: "12px 16px", fontWeight: 700 }}>
+                                {r === 1 ? "🥇 #1" : r === 2 ? "🥈 #2" : r === 3 ? "🥉 #3" : `#${r}`}
+                              </td>
+                              <td style={{ padding: "12px 16px", fontWeight: 600 }}>{p.name}</td>
+                              <td style={{ padding: "12px 16px" }}>{p.hospital}</td>
+                              <td style={{ padding: "12px 16px", fontWeight: 700, color: "#10b981" }}>{p.score}</td>
+                              <td style={{ padding: "12px 16px", color: isDarkMode ? "#94a3b8" : "#64748b" }}>
+                                {p.totalAnswered}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </>
                 )}
               </Paper>
             );
