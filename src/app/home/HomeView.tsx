@@ -7,13 +7,14 @@ import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { isTauri } from "@/lib/isTauri";
 import { IconFileImport, IconFolder, IconPlus, IconPower, IconRefresh, IconSearch } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import DeckModal from "../deck/DeckModal";
 import DeckMenu from "../deck/DeckMenu";
 import { ImportJsonFlashcardsModal } from "../deck/ImportJsonFlashcardsModal";
 import { AppHeaderContent } from "../shell/Header/Header";
+import { seedAllContent } from "@/logic/seedData";
 import "./HomeView.css";
 
 const BASE = "home-view";
@@ -30,6 +31,12 @@ export default function HomeView() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useHotkeys([["n", () => setNewDeckModalOpened(true)]]);
+
+  useEffect(() => {
+    if (isReady && allDecks && allDecks.length === 0) {
+      seedAllContent();
+    }
+  }, [isReady, allDecks]);
 
   const handleQuitApp = async () => {
     if (window.confirm("Are you sure you want to exit Renal Review completely?")) {
