@@ -126,3 +126,58 @@ export function setCurrentSessionStudent(student: Student | null): void {
     sessionStorage.removeItem("active_student_session");
   }
 }
+
+export async function updateStudent(updatedStudent: Student): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("students")
+      .update({
+        name: updatedStudent.name,
+        student_code: updatedStudent.student_code.toUpperCase(),
+        pin: updatedStudent.pin,
+        group_name: updatedStudent.group_name,
+        rotation_start: updatedStudent.rotation_start,
+      })
+      .eq("id", updatedStudent.id);
+    if (error) {
+      console.warn("Could not update student in Supabase, updating locally", error);
+    }
+  } catch (e) {
+    console.warn("Supabase student update error, updating locally", e);
+  }
+
+  const existing = await getStudents();
+  const updatedList = existing.map((s) => (s.id === updatedStudent.id ? updatedStudent : s));
+  localStorage.setItem(LOCAL_STUDENTS_KEY, JSON.stringify(updatedList));
+  return true;
+}
+
+export async function deleteStudent(studentId: string, studentCode?: string): Promise<boolean> {
+  try {
+    await supabase.from("students").delete().eq("id", studentId);
+    if (studentCode) {
+      await supabase.from("responses").delete().eq("student_id", studentCode);
+    }
+  } catch (e) {
+    console.warn("Could not delete student from Supabase, deleting locally", e);
+  }
+
+  const existing = await getStudents();
+  const filtered = existing.filter((s) => s.id !== studentId && (studentCode ? s.student_code !== studentCode : true));
+  localStorage.setItem(LOCAL_STUDENTS_KEY, JSON.stringify(filtered));
+
+  if (studentCode) {
+    const localResponses = localStorage.getItem("renal_review_responses");
+    if (localResponses) {
+      try {
+        const respList: any[] = JSON.parse(localResponses);
+        const filteredResp = respList.filter((r) => r.student_id !== studentCode);
+        localStorage.setItem("renal_review_responses", JSON.stringify(filteredResp));
+      } catch (err) {
+        // ignore
+      }
+    }
+  }
+
+  return true;
+}

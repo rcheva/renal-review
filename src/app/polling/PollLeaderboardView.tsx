@@ -4,8 +4,9 @@ import { Button, Paper, TextInput } from "@/components/ui";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { supabase } from "@/logic/supabase";
 import { Student, PollGroup, Response, Question } from "./types";
-import { getStudents, getPollGroups } from "./pollingStore";
+import { getStudents, getPollGroups, deleteStudent } from "./pollingStore";
 import { seedTestStudentsAndResponses } from "./seedTestStudents";
+import { EditStudentModal } from "./EditStudentModal";
 import {
   IconTrophy,
   IconMedal,
@@ -14,6 +15,8 @@ import {
   IconReportAnalytics,
   IconArrowLeft,
   IconUserPlus,
+  IconPencil,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
@@ -174,6 +177,24 @@ export default function PollLeaderboardView() {
     loadData();
   };
 
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteStudent = async (student: Student) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete student "${student.name}" (${student.student_code})?\nThis will remove their profile and response records.`
+    );
+    if (confirmDelete) {
+      await deleteStudent(student.id, student.student_code);
+      loadData();
+    }
+  };
+
   return (
     <>
       <AppHeaderContent>
@@ -184,6 +205,13 @@ export default function PollLeaderboardView() {
           ]}
         />
       </AppHeaderContent>
+
+      <EditStudentModal
+        student={editingStudent}
+        opened={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSaved={loadData}
+      />
 
       <div
         style={{
@@ -247,86 +275,85 @@ export default function PollLeaderboardView() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Search & Filter Bar */}
         <Paper
           withBorder
           style={{
             padding: "1rem",
             marginBottom: "1.5rem",
             display: "flex",
-            justifyContent: "space-between",
+            gap: "1rem",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "1rem",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IconFilter size={18} color="var(--color-text-muted)" />
-            <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Filter Group:</span>
-            <button
-              onClick={() => setSelectedGroup("All")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                border: "none",
-                background: selectedGroup === "All" ? "#2563eb" : "transparent",
-                color: selectedGroup === "All" ? "white" : "inherit",
-                fontWeight: selectedGroup === "All" ? 600 : 400,
-                cursor: "pointer",
-                fontSize: "0.85rem",
-              }}
-            >
-              All Groups
-            </button>
-            {groups.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setSelectedGroup(g.name)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "20px",
-                  border: "none",
-                  background: selectedGroup.toLowerCase() === g.name.toLowerCase() ? "#2563eb" : "transparent",
-                  color: selectedGroup.toLowerCase() === g.name.toLowerCase() ? "white" : "inherit",
-                  fontWeight: selectedGroup.toLowerCase() === g.name.toLowerCase() ? 600 : 400,
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {g.name}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ minWidth: "260px" }}>
+          <div style={{ flex: 1, minWidth: "220px" }}>
             <TextInput
-              placeholder="Search Student Name or ID..."
+              placeholder="Search by student name or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftSection={<IconSearch size={16} />}
             />
           </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <IconFilter size={16} color="#64748b" />
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b" }}>
+              Filter Group:
+            </span>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--theme-neutral-300)",
+                background: "var(--theme-card-bg)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
+              <option value="ALL">All Groups / Hospitals</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.name}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </Paper>
 
         {/* Leaderboard Table */}
         {loading ? (
-          <p>Loading leaderboard rankings...</p>
+          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+            Loading leaderboard statistics...
+          </div>
         ) : filteredLeaderboard.length === 0 ? (
-          <Paper withBorder style={{ padding: "3rem", textAlign: "center", color: "var(--theme-neutral-500)" }}>
-            No student poll records match your selected filter.
+          <Paper withBorder style={{ padding: "3rem", textAlign: "center" }}>
+            <h3>No student records found</h3>
+            <p style={{ color: "#64748b", maxWidth: "450px", margin: "0.5rem auto 1.5rem auto" }}>
+              There are no student responses registered yet. Click "Seed 5 Test Students" above or have students enter their ID during polls.
+            </p>
           </Paper>
         ) : (
-          <Paper withBorder style={{ overflow: "hidden", borderRadius: "8px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+          <Paper withBorder style={{ padding: 0, overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "0.9rem",
+              }}
+            >
               <thead>
                 <tr
                   style={{
-                    background: "var(--color-bg-secondary, #f8fafc)",
-                    borderBottom: "1px solid var(--color-border, #e2e8f0)",
-                    color: "var(--color-text-muted, #64748b)",
+                    borderBottom: "2px solid var(--color-border, #cbd5e1)",
+                    background: "var(--theme-neutral-100, #f8fafc)",
+                    fontWeight: 700,
                   }}
                 >
-                  <th style={{ padding: "12px 16px", width: "80px" }}>Rank</th>
+                  <th style={{ padding: "12px 16px" }}>Rank</th>
                   <th style={{ padding: "12px 16px" }}>Student Name</th>
                   <th style={{ padding: "12px 16px" }}>Student ID</th>
                   <th style={{ padding: "12px 16px" }}>Group / Hospital</th>
@@ -334,7 +361,7 @@ export default function PollLeaderboardView() {
                   <th style={{ padding: "12px 16px", textAlign: "center" }}>Correct Answers</th>
                   <th style={{ padding: "12px 16px", textAlign: "center" }}>Accuracy %</th>
                   <th style={{ padding: "12px 16px" }}>First Poll Date</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Report</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -426,13 +453,32 @@ export default function PollLeaderboardView() {
                       </td>
 
                       <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <Button
-                          variant="subtle"
-                          size="xs"
-                          onClick={() => navigate(`/polling/reports?student=${encodeURIComponent(item.student.student_code)}`)}
-                        >
-                          View Report
-                        </Button>
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            onClick={() => navigate(`/polling/reports?student=${encodeURIComponent(item.student.student_code)}`)}
+                          >
+                            Report
+                          </Button>
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            onClick={() => handleEditStudent(item.student)}
+                            title="Edit Student Details"
+                          >
+                            <IconPencil size={14} color="#2563eb" />
+                          </Button>
+                          <Button
+                            variant="subtle"
+                            size="xs"
+                            onClick={() => handleDeleteStudent(item.student)}
+                            title="Delete Student"
+                            style={{ color: "#dc2626" }}
+                          >
+                            <IconTrash size={14} color="#dc2626" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

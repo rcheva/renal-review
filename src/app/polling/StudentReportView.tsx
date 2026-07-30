@@ -4,8 +4,9 @@ import { Button, Paper } from "@/components/ui";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { supabase } from "@/logic/supabase";
 import { Student, Response, Poll, Question } from "./types";
-import { getStudents } from "./pollingStore";
+import { getStudents, deleteStudent } from "./pollingStore";
 import { saveStudentReportToOneDrive } from "@/logic/oneDriveSync";
+import { EditStudentModal } from "./EditStudentModal";
 import {
   IconReportAnalytics,
   IconDownload,
@@ -15,6 +16,8 @@ import {
   IconCalendar,
   IconAward,
   IconFileText,
+  IconPencil,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import parse from "html-react-parser";
@@ -281,6 +284,24 @@ export default function StudentReportView() {
 
     alert(res.message);
   };
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleDeleteActiveStudent = async () => {
+    if (!activeStudent) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete student "${activeStudent.name}" (${activeStudent.student_code})?\nThis will remove their profile and response records.`
+    );
+    if (confirmDelete) {
+      await deleteStudent(activeStudent.id, activeStudent.student_code);
+      const remaining = await getStudents();
+      setStudents(remaining);
+      if (remaining.length > 0) {
+        setSelectedStudentCode(remaining[0].student_code);
+      } else {
+        setSelectedStudentCode("");
+      }
+    }
+  };
 
   return (
     <>
@@ -288,11 +309,20 @@ export default function StudentReportView() {
         <AppBreadcrumbs
           segments={[
             { label: "Live Polling", path: "/polling" },
-            { label: "Leaderboard", path: "/polling/leaderboard" },
-            { label: "Student Report" },
+            { label: "Reports" },
           ]}
         />
       </AppHeaderContent>
+
+      <EditStudentModal
+        student={activeStudent}
+        opened={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSaved={async () => {
+          const updated = await getStudents();
+          setStudents(updated);
+        }}
+      />
 
       <div
         style={{
@@ -302,7 +332,7 @@ export default function StudentReportView() {
           padding: "20px 0",
         }}
       >
-        {/* Top Header & Selector */}
+        {/* Header Title Bar */}
         <div
           style={{
             display: "flex",
@@ -353,47 +383,76 @@ export default function StudentReportView() {
             alignItems: "center",
             gap: "1.5rem",
             flexWrap: "wrap",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ minWidth: "260px" }}>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "4px" }}>
-              Select Student Profile:
-            </label>
-            <select
-              value={activeStudent?.student_code || ""}
-              onChange={(e) => setSelectedStudentCode(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                border: "1px solid var(--color-border, #d1d5db)",
-                background: "var(--color-bg-card, white)",
-                color: "var(--color-text-main, #111827)",
-                fontSize: "0.9rem",
-              }}
-            >
-              {students.map((s) => (
-                <option key={s.id || s.student_code} value={s.student_code}>
-                  {s.name} ({s.student_code}) - {s.group_name}
-                </option>
-              ))}
-            </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", flex: 1 }}>
+            <div style={{ minWidth: "260px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+                Select Student Profile:
+              </label>
+              <select
+                value={activeStudent?.student_code || ""}
+                onChange={(e) => setSelectedStudentCode(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border, #d1d5db)",
+                  background: "var(--color-bg-card, white)",
+                  color: "var(--color-text-main, #111827)",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {students.map((s) => (
+                  <option key={s.id || s.student_code} value={s.student_code}>
+                    {s.name} ({s.student_code}) - {s.group_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {activeStudent && (
+              <div style={{ display: "flex", gap: "2rem", fontSize: "0.9rem", flexWrap: "wrap" }}>
+                <div>
+                  <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>Student Code</span>
+                  <strong>{activeStudent.student_code}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>Group / Hospital</span>
+                  <strong>{activeStudent.group_name}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>Security PIN</span>
+                  <strong>{activeStudent.pin || "••••"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>First Poll Date</span>
+                  <strong>{firstPollDate ? new Date(firstPollDate).toLocaleDateString() : "N/A"}</strong>
+                </div>
+              </div>
+            )}
           </div>
 
           {activeStudent && (
-            <div style={{ display: "flex", gap: "2rem", fontSize: "0.9rem", flexWrap: "wrap" }}>
-              <div>
-                <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>Student Code</span>
-                <strong>{activeStudent.student_code}</strong>
-              </div>
-              <div>
-                <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>Group / Hospital</span>
-                <strong>{activeStudent.group_name}</strong>
-              </div>
-              <div>
-                <span style={{ color: "var(--color-text-muted)", display: "block", fontSize: "0.75rem" }}>First Poll Date</span>
-                <strong>{firstPollDate ? new Date(firstPollDate).toLocaleDateString() : "N/A"}</strong>
-              </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button
+                variant="subtle"
+                size="sm"
+                onClick={() => setIsEditModalOpen(true)}
+                leftSection={<IconPencil size={16} color="#2563eb" />}
+              >
+                Edit Student Details
+              </Button>
+              <Button
+                variant="subtle"
+                size="sm"
+                onClick={handleDeleteActiveStudent}
+                leftSection={<IconTrash size={16} color="#dc2626" />}
+                style={{ color: "#dc2626" }}
+              >
+                Delete Student
+              </Button>
             </div>
           )}
         </Paper>
