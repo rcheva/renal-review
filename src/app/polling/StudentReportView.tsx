@@ -173,8 +173,16 @@ export default function StudentReportView() {
       acc: Math.round((val.correct / val.total) * 100),
     }));
 
-  const handleExportHTMLReport = () => {
+  const handleExportHTMLReport = async () => {
     if (!activeStudent) return;
+
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(2);
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const cleanName = activeStudent.name.replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanGroup = (activeStudent.group_name || "Renal").replace(/[^a-zA-Z0-9]/g, "_");
+
+    const filename = `${yy}_${mm}_${cleanName}_${cleanGroup}.html`;
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -272,11 +280,36 @@ export default function StudentReportView() {
 </html>
     `;
 
+    try {
+      const isTauri =
+        window.location.origin.includes("tauri://") ||
+        window.location.origin.includes("file://") ||
+        (window as any).__TAURI_INTERNALS__;
+
+      if (isTauri) {
+        const { writeTextFile, mkdir, exists } = await import("@tauri-apps/plugin-fs");
+        const oneDriveBase = "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/Reports";
+        const fullPath = `${oneDriveBase}/${filename}`;
+
+        const dirExists = await exists(oneDriveBase);
+        if (!dirExists) {
+          await mkdir(oneDriveBase, { recursive: true });
+        }
+
+        await writeTextFile(fullPath, htmlContent);
+        alert(`Report saved to OneDrive Reports folder:\n${fullPath}`);
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not save report directly to OneDrive folder via Tauri, offering browser download", err);
+    }
+
+    // Browser fallback
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `rotation_report_${activeStudent.student_code.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.html`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
