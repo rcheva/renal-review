@@ -1,13 +1,24 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
 import EmptyNotice from "@/components/EmptyNotice";
-import { Button, Kbd, Paper, TextInput, Tooltip } from "@/components/ui";
+import { Button, Kbd, Modal, Paper, TextInput, Tooltip } from "@/components/ui";
 import { useDocumentTitle } from "@/lib/hooks/useDocumentTitle";
 import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { isTauri } from "@/lib/isTauri";
-import { IconFileImport, IconFolder, IconPlus, IconPower, IconRefresh, IconSearch } from "@tabler/icons-react";
-import { useMemo, useState, useEffect } from "react";
+import { db } from "@/logic/db";
+import { exportDB, importInto } from "dexie-export-import";
+import {
+  IconFileImport,
+  IconFolder,
+  IconPlus,
+  IconPower,
+  IconRefresh,
+  IconSearch,
+  IconCloudUpload,
+  IconDatabaseExport,
+} from "@tabler/icons-react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import DeckModal from "../deck/DeckModal";
@@ -25,6 +36,8 @@ export default function HomeView() {
   const navigate = useNavigate();
   const [newDeckModalOpened, setNewDeckModalOpened] = useState(false);
   const [isImportFlashcardsModalOpen, setIsImportFlashcardsModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [allDecks, isReady] = useAllDecks();
   const [userName, userNameIsReady] = useSetting("#name");
 
@@ -97,6 +110,14 @@ export default function HomeView() {
             variant="default"
           >
             Refresh App
+          </Button>
+
+          <Button
+            onClick={() => setIsBackupModalOpen(true)}
+            leftSection={<IconCloudUpload size={16} />}
+            variant="default"
+          >
+            Sync / Transfer Decks
           </Button>
 
           <Button
@@ -292,6 +313,69 @@ export default function HomeView() {
         opened={isImportFlashcardsModalOpen}
         onClose={() => setIsImportFlashcardsModalOpen(false)}
       />
+
+      <Modal
+        title="Sync & Transfer Decks (Mac to iPhone)"
+        opened={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", padding: "0.5rem 0" }}>
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--theme-neutral-700)", lineHeight: 1.5 }}>
+            Easily transfer your exact flashcards, subdecks (such as <strong>26 Acute PD</strong>), and renal topics between your Mac and your iPhone 14.
+          </p>
+
+          <div style={{ padding: "1rem", borderRadius: "8px", background: "var(--theme-neutral-50)", border: "1px solid var(--theme-neutral-200)" }}>
+            <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--theme-primary-900)" }}>1. On your Mac Desktop App:</h4>
+            <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.85rem", color: "var(--theme-neutral-600)" }}>
+              Export a complete backup file containing all your custom decks & flashcards.
+            </p>
+            <Button
+              leftSection={<IconDatabaseExport size={16} />}
+              onClick={async () => {
+                const now = new Date();
+                const blob = await exportDB(db);
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `renal-review-backup-${now.toISOString().slice(0, 10)}.json`;
+                a.click();
+              }}
+            >
+              Export Backup File (.json)
+            </Button>
+          </div>
+
+          <div style={{ padding: "1rem", borderRadius: "8px", background: "var(--theme-neutral-50)", border: "1px solid var(--theme-neutral-200)" }}>
+            <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--theme-primary-900)" }}>2. On your iPhone 14 (Safari):</h4>
+            <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.85rem", color: "var(--theme-neutral-600)" }}>
+              Upload the exported backup file to instantly load all your decks on your phone.
+            </p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  await importInto(db, file, { clearTablesBeforeImport: false, overwriteValues: true });
+                  alert("✅ Decks & flashcards successfully synced!");
+                  window.location.reload();
+                } catch (err: any) {
+                  alert("Error importing backup: " + (err?.message || err));
+                }
+              }}
+            />
+            <Button
+              variant="default"
+              leftSection={<IconFileImport size={16} />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Import Backup File (.json)
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

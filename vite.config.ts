@@ -54,7 +54,8 @@ export default defineConfig({
               background_color: "#ffffff",
               display: "fullscreen",
               orientation: "portrait-primary",
-              start_url: "/",
+              start_url: "./",
+              scope: "./",
               icons: [
                 {
                   src: "logo256.png",
