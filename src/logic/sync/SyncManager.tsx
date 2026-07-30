@@ -11,6 +11,7 @@ import { db } from "../db";
 import { useSetting } from "../settings/hooks/useSetting";
 import { setSetting } from "../settings/setSetting";
 import { supabase } from "../supabase";
+import { addSyncLog } from "./syncLogStore";
 
 interface SyncContextType {
   isSyncing: boolean;
@@ -33,12 +34,17 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const dirtyRef = useRef(false);
   const syncTimeoutRef = useRef<any>(null);
+  const initialCheckDoneRef = useRef(false);
 
   useEffect(() => {
-    // 1. Initial Auto-Restore Check on Startup
+    if (initialCheckDoneRef.current) return;
+    initialCheckDoneRef.current = true;
+
+    // 1. Initial Check on Startup
     const checkAndRestore = async () => {
       try {
         setIsSyncing(true);
+        addSyncLog("Checking Supabase for cloud deck backups...", "info");
         let query = supabase
           .from("user_backups")
           .select("created_at, data")
@@ -50,14 +56,23 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         const { data: backups, error } = await query;
-        if (error || !backups || backups.length === 0) return;
+        if (error) {
+          addSyncLog(`Cloud check warning: ${error.message}`, "warn");
+          return;
+        }
+        if (!backups || backups.length === 0) {
+          addSyncLog("No existing cloud backups found in Supabase.", "info");
+          return;
+        }
 
         const backup = backups[0];
         const backupTime = new Date(backup.created_at).getTime();
         const localTime = lastSyncedAt ? Number(lastSyncedAt) : 0;
 
-        if (backupTime > localTime + 3000) {
-          console.log("Cloud deck backup is newer. Restoring automatically...");
+        addSyncLog(`Cloud backup date: ${new Date(backupTime).toLocaleString()}`, "info");
+
+        if (backupTime > localTime + 10000) {
+          addSyncLog("Newer cloud backup detected! Restoring decks...", "info");
           const text = JSON.stringify(backup.data);
           const blob = new Blob([text], { type: "application/json" });
           await importInto(db, blob, {
@@ -65,17 +80,19 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
             overwriteValues: true,
           });
           await setSetting("#cloud_lastSyncedAt", backupTime);
-          setTimeout(() => window.location.reload(), 1000);
+          addSyncLog("✅ Cloud decks successfully restored to local database.", "success");
+        } else {
+          addSyncLog("Local database is up to date with cloud.", "success");
         }
-      } catch (err) {
-        console.error("Auto-restore error:", err);
+      } catch (err: any) {
+        addSyncLog(`Sync check error: ${err?.message || err}`, "warn");
       } finally {
         setIsSyncing(false);
       }
     };
 
     checkAndRestore();
-  }, [session?.user, lastSyncedAt]);
+  }, [session?.user]);
 
   // 2. Setup Automatic Backup Tracking
   useEffect(() => {
@@ -83,15 +100,15 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
       dirtyRef.current = true;
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
 
-      // Debounce backup for 5 seconds after last modification
-      syncTimeoutRef.current = setTimeout(performAutoBackup, 5000);
+      // Debounce backup for 15 seconds after last modification
+      syncTimeoutRef.current = setTimeout(performAutoBackup, 15000);
     };
 
     const performAutoBackup = async () => {
       if (!dirtyRef.current) return;
       try {
         setIsSyncing(true);
-        console.log("Performing auto-backup of decks to Supabase...");
+        addSyncLog("Auto-backing up local database to Supabase cloud...", "info");
         const blob = await exportDB(db);
         const text = await blob.text();
         const data = JSON.parse(text);
@@ -104,18 +121,19 @@ export const SyncManagerProvider: React.FC<{ children: React.ReactNode }> = ({
           .single();
 
         if (error) {
-          console.warn("Auto-backup insert error", error);
+          addSyncLog(`Auto-backup warning: ${error.message}`, "warn");
           return;
         }
 
         if (newBackup) {
           const newTime = new Date(newBackup.created_at).getTime();
           await setSetting("#cloud_lastSyncedAt", newTime);
+          addSyncLog("✅ Database snapshot backed up to Supabase cloud.", "success");
         }
 
         dirtyRef.current = false;
-      } catch (err) {
-        console.error("Auto-backup error:", err);
+      } catch (err: any) {
+        addSyncLog(`Auto-backup error: ${err?.message || err}`, "warn");
       } finally {
         setIsSyncing(false);
       }

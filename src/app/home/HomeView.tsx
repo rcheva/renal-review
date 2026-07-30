@@ -8,6 +8,7 @@ import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { isTauri } from "@/lib/isTauri";
 import { db } from "@/logic/db";
 import { exportDB, importInto } from "dexie-export-import";
+import { getSyncLogs } from "@/logic/sync/syncLogStore";
 import {
   IconFileImport,
   IconFolder,
@@ -17,6 +18,9 @@ import {
   IconSearch,
   IconCloudUpload,
   IconDatabaseExport,
+  IconTerminal,
+  IconCopy,
+  IconCheck,
 } from "@tabler/icons-react";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +41,8 @@ export default function HomeView() {
   const [newDeckModalOpened, setNewDeckModalOpened] = useState(false);
   const [isImportFlashcardsModalOpen, setIsImportFlashcardsModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [copiedLogs, setCopiedLogs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [allDecks, isReady] = useAllDecks();
   const [userName, userNameIsReady] = useSetting("#name");
@@ -126,6 +132,14 @@ export default function HomeView() {
             variant="default"
           >
             Import Flashcards (JSON)
+          </Button>
+
+          <Button
+            onClick={() => setIsLogsModalOpen(true)}
+            leftSection={<IconTerminal size={16} />}
+            variant="default"
+          >
+            View Sync Logs
           </Button>
 
           <Tooltip
@@ -373,6 +387,76 @@ export default function HomeView() {
             >
               Import Backup File (.json)
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Sync Diagnostic Logs"
+        opened={isLogsModalOpen}
+        onClose={() => setIsLogsModalOpen(false)}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "0.5rem 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "0.85rem", color: "var(--theme-neutral-600)" }}>
+              Diagnostic events & background sync activity:
+            </span>
+            <Button
+              size="xs"
+              variant="subtle"
+              leftSection={copiedLogs ? <IconCheck size={14} /> : <IconCopy size={14} />}
+              onClick={() => {
+                const logs = getSyncLogs();
+                const logText = logs
+                  .map((l) => `[${l.timestamp}] [${l.type.toUpperCase()}] ${l.message}`)
+                  .join("\n");
+                navigator.clipboard.writeText(logText);
+                setCopiedLogs(true);
+                setTimeout(() => setCopiedLogs(false), 2000);
+              }}
+            >
+              {copiedLogs ? "Copied!" : "Copy Logs"}
+            </Button>
+          </div>
+
+          <div
+            style={{
+              maxHeight: "300px",
+              overflowY: "auto",
+              padding: "0.75rem",
+              borderRadius: "8px",
+              background: "#1e293b",
+              color: "#e2e8f0",
+              fontFamily: "monospace",
+              fontSize: "0.8rem",
+              lineHeight: 1.6,
+            }}
+          >
+            {getSyncLogs().length === 0 ? (
+              <span style={{ color: "#94a3b8" }}>No sync events logged yet.</span>
+            ) : (
+              getSyncLogs().map((entry, idx) => (
+                <div key={idx} style={{ marginBottom: "4px" }}>
+                  <span style={{ color: "#64748b" }}>[{entry.timestamp}]</span>{" "}
+                  <span
+                    style={{
+                      color:
+                        entry.type === "error"
+                          ? "#f87171"
+                          : entry.type === "warn"
+                          ? "#fbbf24"
+                          : entry.type === "success"
+                          ? "#4ade80"
+                          : "#38bdf8",
+                      fontWeight: 600,
+                    }}
+                  >
+                    [{entry.type.toUpperCase()}]
+                  </span>{" "}
+                  {entry.message}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </Modal>
