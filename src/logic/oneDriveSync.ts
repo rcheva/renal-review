@@ -156,3 +156,67 @@ export async function syncAllStructureToOneDrive(): Promise<void> {
     console.error("OneDrive initial structure sync error:", err);
   }
 }
+
+/**
+ * Saves HTML Student Rotation Report directly to OneDrive Reports folder.
+ * Target path: /Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/Reports/YY_MM_name_group.html
+ */
+export async function saveStudentReportToOneDrive(
+  studentName: string,
+  groupName: string,
+  htmlContent: string
+): Promise<{ success: boolean; filePath: string; message: string }> {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2);
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+
+  const safeName = studentName.replace(/[/\\?%*:|"<>]/g, "-").trim();
+  const safeGroup = (groupName || "Renal").replace(/[/\\?%*:|"<>]/g, "-").trim();
+  const fileName = `${yy}_${mm}_${safeName}_${safeGroup}.html`;
+
+  const reportsFolder = `${ONEDRIVE_ROOT}/Reports`;
+  const fullFilePath = `${reportsFolder}/${fileName}`;
+
+  if (isTauri()) {
+    try {
+      const { writeTextFile, mkdir, exists } = await import("@tauri-apps/plugin-fs");
+      const dirExists = await exists(reportsFolder);
+      if (!dirExists) {
+        await mkdir(reportsFolder, { recursive: true });
+      }
+      await writeTextFile(fullFilePath, htmlContent);
+      console.log(`Saved student report to OneDrive Reports: ${fullFilePath}`);
+      return {
+        success: true,
+        filePath: fullFilePath,
+        message: `Report successfully saved directly to OneDrive:\n${fullFilePath}`,
+      };
+    } catch (err) {
+      console.error("Failed writing student report to OneDrive via Tauri:", err);
+    }
+  }
+
+  // Fallback download if not in Tauri
+  try {
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return {
+      success: true,
+      filePath: fileName,
+      message: `Downloaded report file: ${fileName}`,
+    };
+  } catch (e) {
+    return {
+      success: false,
+      filePath: "",
+      message: "Could not export report file.",
+    };
+  }
+}

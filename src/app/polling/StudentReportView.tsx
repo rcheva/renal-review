@@ -5,6 +5,7 @@ import { AppHeaderContent } from "../shell/Header/Header";
 import { supabase } from "@/logic/supabase";
 import { Student, Response, Poll, Question } from "./types";
 import { getStudents } from "./pollingStore";
+import { saveStudentReportToOneDrive } from "@/logic/oneDriveSync";
 import {
   IconReportAnalytics,
   IconDownload,
@@ -176,14 +177,6 @@ export default function StudentReportView() {
   const handleExportHTMLReport = async () => {
     if (!activeStudent) return;
 
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(2);
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const cleanName = activeStudent.name.replace(/[^a-zA-Z0-9]/g, "_");
-    const cleanGroup = (activeStudent.group_name || "Renal").replace(/[^a-zA-Z0-9]/g, "_");
-
-    const filename = `${yy}_${mm}_${cleanName}_${cleanGroup}.html`;
-
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -280,40 +273,13 @@ export default function StudentReportView() {
 </html>
     `;
 
-    try {
-      const isTauri =
-        window.location.origin.includes("tauri://") ||
-        window.location.origin.includes("file://") ||
-        (window as any).__TAURI_INTERNALS__;
+    const res = await saveStudentReportToOneDrive(
+      activeStudent.name,
+      activeStudent.group_name || "Renal",
+      htmlContent
+    );
 
-      if (isTauri) {
-        const { writeTextFile, mkdir, exists } = await import("@tauri-apps/plugin-fs");
-        const oneDriveBase = "/Users/julio/Library/CloudStorage/OneDrive-Personal/Renal_Review/Reports";
-        const fullPath = `${oneDriveBase}/${filename}`;
-
-        const dirExists = await exists(oneDriveBase);
-        if (!dirExists) {
-          await mkdir(oneDriveBase, { recursive: true });
-        }
-
-        await writeTextFile(fullPath, htmlContent);
-        alert(`Report saved to OneDrive Reports folder:\n${fullPath}`);
-        return;
-      }
-    } catch (err) {
-      console.warn("Could not save report directly to OneDrive folder via Tauri, offering browser download", err);
-    }
-
-    // Browser fallback
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    alert(res.message);
   };
 
   return (
