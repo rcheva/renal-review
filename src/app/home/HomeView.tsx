@@ -9,6 +9,7 @@ import { isTauri } from "@/lib/isTauri";
 import { db } from "@/logic/db";
 import { exportDB, importInto } from "dexie-export-import";
 import { getSyncLogs } from "@/logic/sync/syncLogStore";
+import { cleanDuplicateDecks } from "@/logic/deck/cleanDuplicateDecks";
 import {
   IconFileImport,
   IconFolder,
@@ -51,8 +52,12 @@ export default function HomeView() {
   useHotkeys([["n", () => setNewDeckModalOpened(true)]]);
 
   useEffect(() => {
-    if (isReady && allDecks && allDecks.length === 0) {
-      seedAllContent();
+    if (isReady && allDecks) {
+      if (allDecks.length === 0) {
+        seedAllContent();
+      } else {
+        cleanDuplicateDecks();
+      }
     }
   }, [isReady, allDecks]);
 
@@ -77,12 +82,23 @@ export default function HomeView() {
     }
   };
 
-  // Derive top-level topic decks (all root parent decks)
+  // Derive top-level topic decks (all root parent decks, deduplicated by name)
   const topicDecks = useMemo(() => {
     if (!allDecks) return [];
-    return allDecks.filter(
+    const rootDecks = allDecks.filter(
       (d) => !d.superDecks || d.superDecks.length === 0
     );
+    // Deduplicate by name
+    const seenNames = new Set<string>();
+    const uniqueTopics: typeof rootDecks = [];
+    for (const deck of rootDecks) {
+      const nameKey = deck.name.trim().toLowerCase();
+      if (!seenNames.has(nameKey)) {
+        seenNames.add(nameKey);
+        uniqueTopics.push(deck);
+      }
+    }
+    return uniqueTopics;
   }, [allDecks]);
 
   // Derive subdecks for a specific parent
@@ -93,15 +109,28 @@ export default function HomeView() {
     );
   };
 
-  // Filtered decks for the table
+  // Filtered decks for the table (deduplicated by name + parent)
   const filteredDecks = useMemo(() => {
     if (!allDecks) return [];
-    if (!searchQuery) return allDecks;
-    return allDecks.filter(
-      (d) =>
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let list = searchQuery
+      ? allDecks.filter(
+          (d) =>
+            d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            d.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allDecks;
+
+    const seenKeys = new Set<string>();
+    const uniqueList: typeof list = [];
+    for (const deck of list) {
+      const parentKey = (deck.superDecks || []).sort().join(",");
+      const key = `${deck.name.trim().toLowerCase()}__${parentKey}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueList.push(deck);
+      }
+    }
+    return uniqueList;
   }, [allDecks, searchQuery]);
 
   return (

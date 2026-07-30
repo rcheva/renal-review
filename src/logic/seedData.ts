@@ -6,6 +6,7 @@ const topics = [
   "AKI",
   "GMN",
   "Dialysis",
+  "PD",
   "Transplant",
   "Electrolytes",
   "Hypertension",
@@ -229,5 +230,10 @@ export async function seedAllContent() {
         );
       }
     }
+  }
+
+  const pdDeck = getTopicDeck("PD");
+  if (pdDeck && !allDecks.some((d) => d.name === "26 Acute PD")) {
+    await newDeck("26 Acute PD", pdDeck);
   }
 }
