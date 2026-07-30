@@ -32,4 +32,5 @@ export const defaultSettings: SettingsValues = {
   "#cloud_autoSyncEnabled": false,
   "#notification_enabled": true,
   "#notification_dailyReminderTime": "21:00",
+  "#public_web_domain": "https://rcheva.github.io/renal-review",
 };

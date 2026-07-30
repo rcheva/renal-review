@@ -44,4 +44,5 @@ export interface SettingsValues {
 
   "#notification_enabled"?: boolean;
   "#notification_dailyReminderTime"?: string;
+  "#public_web_domain"?: string;
 }

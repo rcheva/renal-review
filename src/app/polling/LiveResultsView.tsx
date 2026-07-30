@@ -18,11 +18,15 @@ import {
   IconCheck,
   IconMaximize,
   IconMinimize,
+  IconQrcode,
 } from "@tabler/icons-react";
 import parse from "html-react-parser";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useSetting } from "@/logic/settings/hooks/useSetting";
+import { setSetting } from "@/logic/settings/setSetting";
+import { StudentQrModal } from "./StudentQrModal";
 import { KidneyMedal } from "./KidneyMedal";
 import {
   Bar,
@@ -174,14 +178,18 @@ export default function LiveResultsView() {
     setRevealRationaleMap((prev) => ({ ...prev, [qId]: !prev[qId] }));
   };
 
+  const [publicDomain] = useSetting("#public_web_domain");
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
   if (!poll) return <p style={{ padding: "2rem" }}>Loading presenter live results...</p>;
 
-  const origin =
-    window.location.origin.includes("tauri://") || window.location.origin.includes("file://")
-      ? "https://rcheva.github.io/renal-review"
-      : window.location.origin;
-  const pollUrl = `${origin}/#/poll/${poll.id}`;
+  const activeDomain = publicDomain || "https://rcheva.github.io/renal-review";
+  const pollUrl = `${activeDomain.replace(/\/$/, "")}/#/poll/${poll.id}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Join my live poll: ${poll.title}\n\n${pollUrl}`)}`;
+
+  const handleUpdateDomain = (newDomain: string) => {
+    setSetting("#public_web_domain", newDomain);
+  };
 
   const timerPercent = (timeLeft / timerDuration) * 100;
 
@@ -249,6 +257,14 @@ export default function LiveResultsView() {
 
           {/* Action Toolbar */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              variant="default"
+              leftSection={<IconQrcode size={18} color="#2563eb" />}
+              onClick={() => setIsQrModalOpen(true)}
+            >
+              Show Student QR Code
+            </Button>
+
             <Button
               variant="default"
               leftSection={isFullscreen ? <IconMinimize size={18} /> : <IconMaximize size={18} />}
@@ -407,13 +423,36 @@ export default function LiveResultsView() {
             background: isDarkMode ? "var(--poll-glass-bg)" : "white",
           }}
         >
-          <div style={{ background: "white", padding: "6px", borderRadius: "8px" }}>
+          <div
+            style={{ background: "white", padding: "6px", borderRadius: "8px", cursor: "pointer" }}
+            onClick={() => setIsQrModalOpen(true)}
+            title="Click to display high-resolution QR code for lecture screen"
+          >
             <QRCodeSVG value={pollUrl} size={90} level="M" />
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: isDarkMode ? "#cbd5e1" : "#475569" }}>
-              Student Poll Access URL & QR Code:
-            </span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+                Student Poll Access URL & QR Code:
+              </span>
+              <button
+                onClick={() => setIsQrModalOpen(true)}
+                style={{
+                  border: "none",
+                  background: "none",
+                  color: "#2563eb",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <IconQrcode size={16} />
+                Expand Large QR Code
+              </button>
+            </div>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               <TextInput value={pollUrl} readOnly style={{ flex: 1 }} />
               <Button
@@ -433,6 +472,16 @@ export default function LiveResultsView() {
             </div>
           </div>
         </Paper>
+
+        <StudentQrModal
+          opened={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          pollId={poll.id}
+          pollTitle={poll.title}
+          groupName={poll.group_name}
+          currentPublicDomain={activeDomain}
+          onUpdateDomain={handleUpdateDomain}
+        />
 
         {/* View Toggle Tabs */}
         <div
