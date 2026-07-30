@@ -136,19 +136,49 @@ export default function EditPollView() {
   }, [pollId]);
 
   const fetchPollData = async () => {
-    const { data: pollData } = await supabase
-      .from("polls")
-      .select("*")
-      .eq("id", pollId)
-      .single();
-    if (pollData) setPoll(pollData as Poll);
+    let foundPoll = false;
 
-    const { data: questionData } = await supabase
-      .from("questions")
-      .select("*")
-      .eq("poll_id", pollId)
-      .order("created_at", { ascending: true });
-    if (questionData) setQuestions(questionData as Question[]);
+    try {
+      const pollPromise = supabase
+        .from("polls")
+        .select("*")
+        .eq("id", pollId)
+        .single();
+
+      const timeoutPromise = new Promise<{ data: any }>((resolve) =>
+        setTimeout(() => resolve({ data: null }), 2000)
+      );
+
+      const { data: pollData } = await Promise.race([pollPromise, timeoutPromise]);
+
+      if (pollData) {
+        setPoll(pollData as Poll);
+        foundPoll = true;
+      }
+
+      const { data: questionData } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("poll_id", pollId)
+        .order("created_at", { ascending: true });
+
+      if (questionData) setQuestions(questionData as Question[]);
+    } catch {
+      // ignore
+    }
+
+    if (!foundPoll) {
+      const localPollsStr = localStorage.getItem("renal_review_polls");
+      if (localPollsStr) {
+        try {
+          const localPolls: Poll[] = JSON.parse(localPollsStr);
+          const match = localPolls.find((p) => p.id === pollId);
+          if (match) setPoll(match);
+        } catch {
+          // ignore
+        }
+      }
+    }
   };
 
   const handleAddOption = () => setNewOptions([...newOptions, ""]);

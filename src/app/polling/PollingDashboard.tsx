@@ -79,11 +79,20 @@ export default function PollingDashboard() {
     let pollId = "";
 
     try {
-      const { data, error } = await supabase
+      const insertPromise = supabase
         .from("polls")
         .insert([payload])
         .select()
         .single();
+
+      const timeoutPromise = new Promise<{ data: any; error: any }>((resolve) =>
+        setTimeout(
+          () => resolve({ data: null, error: new Error("Supabase create timeout") }),
+          2500
+        )
+      );
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
       if (!error && data) {
         pollId = data.id;

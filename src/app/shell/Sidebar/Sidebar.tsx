@@ -6,6 +6,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import {
   IconCards,
   IconChartBar,
+  IconDeviceTv,
   IconHome,
   IconReportAnalytics,
   IconSettings,
@@ -107,7 +108,7 @@ function Sidebar({ menuOpened, menuHandlers }: SidebarProps) {
             <NavItem
               label={"Live Polling"}
               path="/polling"
-              icon={<IconChartBar />}
+              icon={<IconDeviceTv />}
               collapsed={minimalMode}
               onClick={fullscreenMode ? menuHandlers.close : undefined}
             />
