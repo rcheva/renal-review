@@ -6,7 +6,7 @@ import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import { useAllDecks } from "@/logic/deck/hooks/useAllDecks";
 import { useSetting } from "@/logic/settings/hooks/useSetting";
 import { isTauri } from "@/lib/isTauri";
-import { IconFileImport, IconFolder, IconPlus, IconPower, IconSearch } from "@tabler/icons-react";
+import { IconFileImport, IconFolder, IconPlus, IconPower, IconRefresh, IconSearch } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
@@ -101,6 +101,14 @@ export default function HomeView() {
       <AppHeaderContent>
         <AppBreadcrumbs />
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <Button
+            onClick={() => window.location.reload()}
+            leftSection={<IconRefresh size={16} />}
+            variant="default"
+          >
+            Refresh App
+          </Button>
+
           <Button
             onClick={() => setIsImportFlashcardsModalOpen(true)}
             leftSection={<IconFileImport size={16} />}

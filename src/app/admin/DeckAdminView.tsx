@@ -9,6 +9,7 @@ import {
   IconExternalLink,
   IconFileImport,
   IconPlus,
+  IconRefresh,
   IconSearch,
   IconTrash,
 } from "@tabler/icons-react";
@@ -167,6 +168,13 @@ export default function DeckAdminView() {
     <>
       <AppHeaderContent>
         <AppBreadcrumbs segments={[{ label: "Administration" }]} />
+        <Button
+          onClick={() => window.location.reload()}
+          leftSection={<IconRefresh size={16} />}
+          variant="default"
+        >
+          Refresh App
+        </Button>
       </AppHeaderContent>
 
       <div className={BASE}>
