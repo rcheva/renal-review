@@ -349,7 +349,17 @@ export async function savePollAndQuestions(
     };
 
     const syncCloud = async () => {
-      const { error: pollErr } = await supabase.from("polls").upsert([pollPayload]);
+      let { error: pollErr } = await supabase.from("polls").upsert([pollPayload]);
+      if (pollErr && (pollErr.code === "PGRST204" || pollErr.message?.includes("group_name"))) {
+        const fallbackPayload = {
+          id: poll.id,
+          title: poll.title,
+          status: poll.status,
+          created_at: poll.created_at || new Date().toISOString(),
+        };
+        const res = await supabase.from("polls").upsert([fallbackPayload]);
+        pollErr = res.error;
+      }
       if (pollErr) return false;
 
       if (questions.length > 0) {
@@ -505,6 +515,48 @@ export async function importPollsFromJson(jsonStr: string): Promise<number> {
   } catch (err: any) {
     throw new Error("Invalid poll package format: " + err.message);
   }
+}
+
+export async function syncAllLocalAndCloud(): Promise<{ uploaded: number; downloaded: number; message: string }> {
+  let uploaded = 0;
+  let downloaded = 0;
+
+  // 1. Push all local polls & questions to Supabase Cloud
+  const localPollsStr = localStorage.getItem(LOCAL_POLLS_KEY);
+  const localPolls: Poll[] = localPollsStr ? JSON.parse(localPollsStr) : [];
+
+  for (const poll of localPolls) {
+    const qStr = localStorage.getItem(`renal_questions_${poll.id}`);
+    const questions: Question[] = qStr ? JSON.parse(qStr) : [];
+    const res = await savePollAndQuestions(poll, questions);
+    if (res.isCloud) uploaded++;
+  }
+
+  // 2. Pull all cloud polls & questions from Supabase Cloud to update local cache
+  try {
+    const { data: cloudPolls } = await supabase.from("polls").select("*");
+    if (cloudPolls) {
+      for (const cp of cloudPolls) {
+        const { data: cloudQs } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("poll_id", cp.id)
+          .order("created_at", { ascending: true });
+
+        const qs = (cloudQs as Question[]) || [];
+        cachePollAndQuestions(cp, qs);
+        downloaded++;
+      }
+    }
+  } catch (e) {
+    console.warn("Error pulling cloud polls during sync:", e);
+  }
+
+  return {
+    uploaded,
+    downloaded,
+    message: `Successfully synchronized: ${uploaded} local poll(s) pushed to Cloud, ${downloaded} Cloud poll(s) updated locally!`,
+  };
 }
 
 

@@ -25,6 +25,7 @@ import {
   savePollAndQuestions,
   exportAllPollsJson,
   importPollsFromJson,
+  syncAllLocalAndCloud,
 } from "./pollingStore";
 
 export default function PollingDashboard() {
@@ -32,6 +33,7 @@ export default function PollingDashboard() {
   const [groups, setGroups] = useState<PollGroup[]>([]);
   const [activeGroupFilter, setActiveGroupFilter] = useState<string>("All");
   const [loading, setLoading] = useState(true);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   // Poll creation modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -70,6 +72,19 @@ export default function PollingDashboard() {
       console.warn("Could not fetch polls, using fallback", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const res = await syncAllLocalAndCloud();
+      setSyncStatusMsg(`✅ ${res.message}`);
+      await fetchPolls();
+    } catch (e: any) {
+      setSyncStatusMsg(`❌ Cloud sync error: ${e.message || e}`);
+    } finally {
+      setIsSyncingCloud(false);
     }
   };
 
@@ -174,14 +189,22 @@ export default function PollingDashboard() {
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <Button
-              variant="default"
               onClick={() => {
                 const exported = exportAllPollsJson();
                 setSyncJsonText(exported);
                 setSyncStatusMsg("");
                 setIsSyncModalOpen(true);
               }}
-              leftSection={<IconRefresh size={18} color="#059669" />}
+              leftSection={<IconRefresh size={18} color="#ffffff" />}
+              title="Synchronize all local polls with Supabase Cloud, transfer between Mac and web, or export/import JSON packages"
+              style={{
+                background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                color: "#ffffff",
+                fontWeight: 600,
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                border: "none",
+                transition: "all 0.2s ease-in-out",
+              }}
             >
               Sync / Transfer Polls
             </Button>
@@ -464,11 +487,48 @@ export default function PollingDashboard() {
         <Modal
           opened={isSyncModalOpen}
           onClose={() => setIsSyncModalOpen(false)}
-          title="Sync & Transfer Polls (Browser ↔ Desktop App)"
+          title="Sync & Transfer Polls (Local ↔ Supabase Cloud ↔ Apps)"
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {/* Supabase Cloud Auto-Sync Card */}
+            <div
+              style={{
+                background: "var(--theme-bg-secondary, rgba(16, 185, 129, 0.06))",
+                border: "1.5px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "8px",
+                padding: "1.1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "1.05rem", color: "var(--theme-primary-600, #059669)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    ☁️ Supabase Cloud Synchronization
+                  </h4>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--theme-neutral-600)" }}>
+                    Push all local polls & questions to Supabase Cloud so Mac Desktop, localhost, and GitHub Pages stay 100% in sync.
+                  </p>
+                </div>
+                <Button
+                  disabled={isSyncingCloud}
+                  onClick={handleSyncCloud}
+                  style={{
+                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                    color: "white",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
+                  }}
+                >
+                  {isSyncingCloud ? "Syncing..." : "⚡ Sync All with Cloud Now"}
+                </Button>
+              </div>
+            </div>
+
             <p style={{ fontSize: "0.875rem", color: "var(--theme-neutral-600)", margin: 0 }}>
-              Transfer all saved polls and questions between your browser and the Mac Desktop app.
+              Or manual JSON import/export between browser sessions:
             </p>
 
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
