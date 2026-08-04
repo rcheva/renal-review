@@ -71,13 +71,23 @@ export default function StudentReportView() {
     let responses: Response[] = [];
 
     try {
-      const { data, error } = await supabase
-        .from("responses")
-        .select("*")
-        .or(`student_id.eq.${student.student_code},respondent_name.eq.${student.name}`);
-      if (!error && data) {
-        responses = data as Response[];
-      }
+      const fetchCloud = async () => {
+        const { data, error } = await supabase
+          .from("responses")
+          .select("*")
+          .or(`student_id.eq.${student.student_code},respondent_name.eq.${student.name}`);
+        if (!error && data) {
+          return data as Response[];
+        }
+        return null;
+      };
+
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 2000)
+      );
+
+      const res = await Promise.race([fetchCloud(), timeoutPromise]);
+      if (res) responses = res;
     } catch (e) {
       console.warn("Could not load responses from Supabase, checking local backup", e);
     }

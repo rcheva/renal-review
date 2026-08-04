@@ -103,15 +103,45 @@ export default function StudentPollView() {
   const fetchData = async () => {
     if (!pollId) return;
 
-    try {
-      const { data: pollData, error: pollError } = await supabase
-        .from("polls")
-        .select("*")
-        .eq("id", pollId)
-        .single();
+    // 1. Local / Cache fallback FIRST
+    const cached = getCachedPollAndQuestions(pollId);
+    let fallbackPoll = cached.poll;
+    let fallbackQuestions = cached.questions || [];
 
-      if (!pollError && pollData) {
-        setPoll(pollData as Poll);
+    if (!fallbackPoll) {
+      const localPollsStr = localStorage.getItem("renal_review_polls");
+      if (localPollsStr) {
+        try {
+          const localPolls = JSON.parse(localPollsStr);
+          fallbackPoll = localPolls.find((p: any) => p.id === pollId) || null;
+        } catch {}
+      }
+    }
+
+    if (!fallbackQuestions || fallbackQuestions.length === 0) {
+      const localQStr = localStorage.getItem(`renal_questions_${pollId}`);
+      if (localQStr) {
+        try {
+          fallbackQuestions = JSON.parse(localQStr);
+        } catch {}
+      }
+    }
+
+    if (fallbackPoll) {
+      setPoll(fallbackPoll);
+      setQuestions(fallbackQuestions || []);
+    }
+
+    // 2. Cloud sync in background with timeout safety
+    try {
+      const fetchCloud = async () => {
+        const { data: pollData, error: pollError } = await supabase
+          .from("polls")
+          .select("*")
+          .eq("id", pollId)
+          .single();
+
+        if (pollError || !pollData) return null;
 
         const { data: questionData } = await supabase
           .from("questions")
@@ -119,23 +149,29 @@ export default function StudentPollView() {
           .eq("poll_id", pollId)
           .order("created_at", { ascending: true });
 
-        if (questionData) {
-          setQuestions(questionData as Question[]);
-          cachePollAndQuestions(pollData, questionData);
-          return;
-        }
+        return {
+          poll: pollData as Poll,
+          questions: (questionData as Question[]) || [],
+        };
+      };
+
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 2000)
+      );
+
+      const cloudResult = await Promise.race([fetchCloud(), timeoutPromise]);
+
+      if (cloudResult && cloudResult.poll) {
+        setPoll(cloudResult.poll);
+        setQuestions(cloudResult.questions);
+        cachePollAndQuestions(cloudResult.poll, cloudResult.questions);
+      } else if (!fallbackPoll) {
+        setError("Poll not found or offline cache unavailable.");
       }
     } catch {
-      // ignore
-    }
-
-    // Offline / Network Fallback
-    const cached = getCachedPollAndQuestions(pollId);
-    if (cached.poll) {
-      setPoll(cached.poll);
-      setQuestions(cached.questions);
-    } else {
-      setError("Poll not found or offline cache unavailable.");
+      if (!fallbackPoll) {
+        setError("Poll not found or offline cache unavailable.");
+      }
     }
   };
 

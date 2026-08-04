@@ -16,6 +16,7 @@ import {
   IconBrain,
   IconBrandWhatsapp,
   IconCheck,
+  IconCircleCheck,
   IconCopy,
   IconDownload,
   IconEdit,
@@ -29,12 +30,49 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, Question } from "./types";
+import {
+  savePollAndQuestions,
+  getCachedPollAndQuestions,
+  LOCAL_POLLS_KEY,
+} from "./pollingStore";
 
 export default function EditPollView() {
   const { pollId } = useParams();
   const navigate = useNavigate();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Save Confirmation Modal State
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveModalInfo, setSaveModalInfo] = useState<{
+    open: boolean;
+    title: string;
+    count: number;
+    isCloud: boolean;
+    message: string;
+  }>({
+    open: false,
+    title: "",
+    count: 0,
+    isCloud: false,
+    message: "",
+  });
+
+  const handleSaveAndConfirmPoll = async (customQuestions?: Question[]) => {
+    if (!poll) return;
+    setIsSaving(true);
+    const qsToSave = customQuestions || questions;
+    const result = await savePollAndQuestions(poll, qsToSave);
+    setIsSaving(false);
+    setSaveModalInfo({
+      open: true,
+      title: poll.title,
+      count: qsToSave.length,
+      isCloud: result.isCloud,
+      message: result.message,
+    });
+  };
 
   // New Question State
   const [newQuestionText, setNewQuestionText] = useState("");
@@ -136,64 +174,81 @@ export default function EditPollView() {
   }, [pollId]);
 
   const fetchPollData = async () => {
-    let foundPoll = false;
+    if (!pollId) return;
 
-    try {
-      const pollPromise = supabase
-        .from("polls")
-        .select("*")
-        .eq("id", pollId)
-        .single();
+    // 1. Instantly check local cache & storage first
+    let localPoll: Poll | null = null;
+    let localQs: Question[] = [];
 
-      const timeoutPromise = new Promise<{ data: any }>((resolve) =>
-        setTimeout(() => resolve({ data: null }), 2000)
-      );
-
-      const { data: pollData } = await Promise.race([pollPromise, timeoutPromise]);
-
-      if (pollData) {
-        setPoll(pollData as Poll);
-        foundPoll = true;
-      }
-
-      const { data: questionData } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("poll_id", pollId)
-        .order("created_at", { ascending: true });
-
-      if (questionData) setQuestions(questionData as Question[]);
-    } catch {
-      // ignore
+    const cached = getCachedPollAndQuestions(pollId);
+    if (cached.poll) {
+      localPoll = cached.poll;
+      localQs = cached.questions || [];
     }
 
-    if (!foundPoll) {
-      const localPollsStr = localStorage.getItem("renal_review_polls");
+    if (!localPoll) {
+      const localPollsStr = localStorage.getItem(LOCAL_POLLS_KEY);
       if (localPollsStr) {
         try {
           const localPolls: Poll[] = JSON.parse(localPollsStr);
           const match = localPolls.find((p) => p.id === pollId);
-          if (match) setPoll(match);
-        } catch {
-          // ignore
-        }
+          if (match) localPoll = match;
+        } catch {}
       }
     }
 
-    // Load local questions fallback
     const localQKey = `renal_questions_${pollId}`;
     const localQStr = localStorage.getItem(localQKey);
     if (localQStr) {
       try {
-        const localQs: Question[] = JSON.parse(localQStr);
-        setQuestions((prev) => {
-          const ids = new Set(prev.map((q) => q.id));
-          const toAdd = localQs.filter((q) => !ids.has(q.id));
-          return [...prev, ...toAdd];
-        });
-      } catch {
-        // ignore
+        const parsedQs: Question[] = JSON.parse(localQStr);
+        if (parsedQs.length > 0) localQs = parsedQs;
+      } catch {}
+    }
+
+    if (localPoll) {
+      setPoll(localPoll);
+      setQuestions(localQs);
+      setLoading(false);
+    }
+
+    // 2. Fetch latest from Supabase in background with timeout safety
+    try {
+      const fetchCloud = async () => {
+        const { data: pollData, error: pollErr } = await supabase
+          .from("polls")
+          .select("*")
+          .eq("id", pollId)
+          .single();
+
+        if (pollErr || !pollData) return null;
+
+        const { data: questionData } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("poll_id", pollId)
+          .order("created_at", { ascending: true });
+
+        return {
+          poll: pollData as Poll,
+          questions: (questionData as Question[]) || [],
+        };
+      };
+
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 2000)
+      );
+
+      const cloudData = await Promise.race([fetchCloud(), timeoutPromise]);
+
+      if (cloudData && cloudData.poll) {
+        setPoll(cloudData.poll);
+        setQuestions(cloudData.questions);
       }
+    } catch (e) {
+      console.warn("Could not fetch poll from Supabase, using local data", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -342,9 +397,6 @@ Here are the flashcards:\n\n`;
 
       // Always save locally to ensure offline / non-UUID poll fallback
       try {
-        const localQKey = `renal_questions_${pollId}`;
-        const existingLocalStr = localStorage.getItem(localQKey);
-        const existingLocal: Question[] = existingLocalStr ? JSON.parse(existingLocalStr) : [];
         const newLocalQs: Question[] = questionsToInsert.map((q, idx) => ({
           id: "q_" + Date.now() + "_" + idx,
           poll_id: pollId || "",
@@ -354,8 +406,20 @@ Here are the flashcards:\n\n`;
           explanation: q.explanation,
           created_at: new Date().toISOString(),
         }));
-        localStorage.setItem(localQKey, JSON.stringify([...existingLocal, ...newLocalQs]));
-        setQuestions((prev) => [...prev, ...newLocalQs]);
+
+        const updatedQuestions = [...questions, ...newLocalQs];
+        setQuestions(updatedQuestions);
+
+        if (poll) {
+          const res = await savePollAndQuestions(poll, updatedQuestions);
+          setSaveModalInfo({
+            open: true,
+            title: poll.title,
+            count: updatedQuestions.length,
+            isCloud: res.isCloud,
+            message: `Successfully imported ${newLocalQs.length} question(s)! Poll "${poll.title}" is saved in system and available live.`,
+          });
+        }
       } catch (err) {
         console.warn("Error saving questions locally", err);
       }
@@ -469,7 +533,27 @@ Here are the flashcards:\n\n`;
     }
   };
 
-  if (!poll) return <p>Loading...</p>;
+  if (loading && !poll) {
+    return (
+      <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--theme-neutral-400)" }}>
+        <p style={{ fontSize: "1.1rem" }}>Loading poll details...</p>
+      </div>
+    );
+  }
+
+  if (!poll) {
+    return (
+      <div style={{ padding: "60px 20px", textAlign: "center" }}>
+        <h2 style={{ fontFamily: "var(--font-serif)", marginBottom: "12px" }}>Poll Not Found</h2>
+        <p style={{ color: "var(--theme-neutral-400)", marginBottom: "24px" }}>
+          The requested poll could not be loaded or may have been removed.
+        </p>
+        <Button variant="default" onClick={() => navigate("/polling")}>
+          Return to Live Polling Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   const origin =
     window.location.origin.includes("tauri://") ||
@@ -659,7 +743,19 @@ Here are the flashcards:\n\n`;
           <h1 style={{ fontFamily: "var(--font-serif)" }}>
             Editing: {poll.title}
           </h1>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+            <Button
+              onClick={() => handleSaveAndConfirmPoll()}
+              disabled={isSaving}
+              leftSection={<IconCheck size={18} />}
+              style={{
+                backgroundColor: "#059669",
+                color: "white",
+                fontWeight: "bold",
+              }}
+            >
+              {isSaving ? "Saving..." : "Save & Confirm Available"}
+            </Button>
             <Button
               variant="default"
               leftSection={<IconDownload size={16} />}
@@ -1100,6 +1196,82 @@ Here are the flashcards:\n\n`;
                   : detectedCount > 0
                   ? `Import ${detectedCount} Questions`
                   : "Parse and Add Questions"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Save & Confirm Available Confirmation Modal */}
+        <Modal
+          opened={saveModalInfo.open}
+          onClose={() => setSaveModalInfo((prev) => ({ ...prev, open: false }))}
+          title="Poll Saved & Live Confirmation"
+        >
+          <div style={{ textAlign: "center", padding: "0.5rem 0" }}>
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "#dcfce7",
+                color: "#16a34a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 1rem auto",
+              }}
+            >
+              <IconCircleCheck size={36} />
+            </div>
+            <h3 style={{ margin: "0 0 0.5rem 0" }}>
+              Poll Saved & Available Live!
+            </h3>
+            <p style={{ color: "var(--theme-neutral-600)", margin: "0 0 1.25rem 0", fontSize: "0.9rem" }}>
+              {saveModalInfo.message}
+            </p>
+
+            <div
+              style={{
+                background: "var(--theme-neutral-50, #f9fafb)",
+                border: "1px solid var(--theme-neutral-200, #e5e7eb)",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1.5rem",
+                textAlign: "left",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+              }}
+            >
+              <div><strong>Poll Title:</strong> {saveModalInfo.title}</div>
+              <div><strong>Questions:</strong> {saveModalInfo.count} Questions Total</div>
+              <div>
+                <strong>Status:</strong>{" "}
+                <span style={{ color: "#16a34a", fontWeight: "bold" }}>● ACTIVE & LIVE</span>
+              </div>
+              <div>
+                <strong>System Sync:</strong>{" "}
+                <span style={{ color: saveModalInfo.isCloud ? "#2563eb" : "#d97706", fontWeight: "600" }}>
+                  {saveModalInfo.isCloud ? "☁️ Cloud & Local Storage Synced" : "💾 Local Storage Synced"}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+              <Button
+                variant="default"
+                onClick={() => setSaveModalInfo((prev) => ({ ...prev, open: false }))}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                onClick={() => {
+                  setSaveModalInfo((prev) => ({ ...prev, open: false }));
+                  navigate(`/polling/live/${poll.id}`);
+                }}
+              >
+                View Live Results
               </Button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { AppBreadcrumbs } from "@/components/AppBreadcrumbs";
-import { Button, Modal, Paper, TextInput } from "@/components/ui";
+import { Button, Modal, Paper, TextInput, Textarea } from "@/components/ui";
 import { supabase } from "@/logic/supabase";
 import {
   IconChartBar,
@@ -9,13 +9,23 @@ import {
   IconReportAnalytics,
   IconFolderPlus,
   IconFilter,
+  IconRefresh,
+  IconUpload,
+  IconDownload,
 } from "@tabler/icons-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, PollGroup } from "./types";
 import { v4 as uuidv4 } from "uuid";
-import { getPollGroups, addPollGroup } from "./pollingStore";
+import {
+  getPollGroups,
+  addPollGroup,
+  getAllPolls,
+  savePollAndQuestions,
+  exportAllPollsJson,
+  importPollsFromJson,
+} from "./pollingStore";
 
 export default function PollingDashboard() {
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -27,6 +37,12 @@ export default function PollingDashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPollTitle, setNewPollTitle] = useState("");
   const [newPollGroup, setNewPollGroup] = useState("Renal");
+
+  // Sync / Transfer Modal State
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncJsonText, setSyncJsonText] = useState("");
+  const [syncStatusMsg, setSyncStatusMsg] = useState("");
+  const syncFileInputRef = useRef<HTMLInputElement>(null);
 
   // New Group modal state
   const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false);
@@ -48,74 +64,29 @@ export default function PollingDashboard() {
   const fetchPolls = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("polls")
-        .select("*, questions(count)")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching polls from Supabase:", error);
-        // Fallback local storage check if offline
-        const localStr = localStorage.getItem("renal_review_polls");
-        if (localStr) setPolls(JSON.parse(localStr));
-      } else {
-        setPolls(data as any[]);
-      }
+      const allPolls = await getAllPolls();
+      setPolls(allPolls);
     } catch (e) {
-      console.warn("Could not fetch polls, using local storage fallback", e);
+      console.warn("Could not fetch polls, using fallback", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreatePoll = async () => {
+  const handleCreatePoll = () => {
     if (!newPollTitle.trim()) return;
 
-    const payload = {
+    const pollId = uuidv4();
+    const newPoll: Poll = {
+      id: pollId,
       title: newPollTitle.trim(),
       group_name: newPollGroup,
       status: "active",
+      created_at: new Date().toISOString(),
     };
 
-    let pollId = "";
-
-    try {
-      const insertPromise = supabase
-        .from("polls")
-        .insert([payload])
-        .select()
-        .single();
-
-      const timeoutPromise = new Promise<{ data: any; error: any }>((resolve) =>
-        setTimeout(
-          () => resolve({ data: null, error: new Error("Supabase create timeout") }),
-          2500
-        )
-      );
-
-      const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
-
-      if (!error && data) {
-        pollId = data.id;
-      }
-    } catch (e) {
-      console.warn("Could not save poll to Supabase, saving locally", e);
-    }
-
-    if (!pollId) {
-      pollId = uuidv4();
-      const localPollsStr = localStorage.getItem("renal_review_polls");
-      const localPolls = localPollsStr ? JSON.parse(localPollsStr) : [];
-      const createdPoll = {
-        ...payload,
-        id: pollId,
-        created_at: new Date().toISOString(),
-      };
-      localStorage.setItem(
-        "renal_review_polls",
-        JSON.stringify([createdPoll, ...localPolls])
-      );
-    }
+    // Save locally instantly & sync in background non-blocking
+    savePollAndQuestions(newPoll, []);
 
     setNewPollTitle("");
     setIsCreateModalOpen(false);
@@ -202,6 +173,18 @@ export default function PollingDashboard() {
           </div>
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              variant="default"
+              onClick={() => {
+                const exported = exportAllPollsJson();
+                setSyncJsonText(exported);
+                setSyncStatusMsg("");
+                setIsSyncModalOpen(true);
+              }}
+              leftSection={<IconRefresh size={18} color="#059669" />}
+            >
+              Sync / Transfer Polls
+            </Button>
             <Button
               variant="default"
               onClick={() => navigate("/polling/leaderboard")}
@@ -364,7 +347,7 @@ export default function PollingDashboard() {
                       Created: {new Date(poll.created_at).toLocaleDateString()}
                     </span>
                     <span>
-                      Questions: {(poll as any).questions?.[0]?.count || 0}
+                      Questions: {(poll as any).questions_count ?? (poll as any).questions?.[0]?.count ?? 0}
                     </span>
                   </div>
                 </div>
@@ -472,6 +455,108 @@ export default function PollingDashboard() {
               </Button>
               <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
                 Save Group
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Sync & Transfer Polls Modal */}
+        <Modal
+          opened={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+          title="Sync & Transfer Polls (Browser ↔ Desktop App)"
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <p style={{ fontSize: "0.875rem", color: "var(--theme-neutral-600)", margin: 0 }}>
+              Transfer all saved polls and questions between your browser and the Mac Desktop app.
+            </p>
+
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <Button
+                variant="default"
+                leftSection={<IconDownload size={16} />}
+                style={{ flex: 1, minWidth: "180px" }}
+                onClick={() => {
+                  const jsonStr = exportAllPollsJson();
+                  navigator.clipboard.writeText(jsonStr);
+                  setSyncStatusMsg("✅ Poll package copied to clipboard! Switch to your Desktop App or browser and paste below to import.");
+                }}
+              >
+                Copy Poll Package
+              </Button>
+              <Button
+                variant="default"
+                leftSection={<IconUpload size={16} />}
+                style={{ flex: 1, minWidth: "180px" }}
+                onClick={() => syncFileInputRef.current?.click()}
+              >
+                Upload Package (.json)
+              </Button>
+              <input
+                type="file"
+                ref={syncFileInputRef}
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = async (evt) => {
+                    try {
+                      const text = evt.target?.result as string;
+                      const count = await importPollsFromJson(text);
+                      setSyncStatusMsg(`✅ Successfully imported and merged ${count} poll(s)!`);
+                      fetchPolls();
+                    } catch (err: any) {
+                      setSyncStatusMsg("❌ Import error: " + err.message);
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </div>
+
+            <Textarea
+              label="Paste Poll Package JSON"
+              placeholder="Paste JSON exported from browser or app here..."
+              value={syncJsonText}
+              onChange={(e) => setSyncJsonText(e.target.value)}
+              style={{ minHeight: "140px" }}
+            />
+
+            {syncStatusMsg && (
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  color: syncStatusMsg.startsWith("✅") ? "#059669" : "#dc2626",
+                  fontWeight: 600,
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  background: syncStatusMsg.startsWith("✅") ? "#ecfdf5" : "#fef2f2",
+                  border: `1px solid ${syncStatusMsg.startsWith("✅") ? "#a7f3d0" : "#fecaca"}`,
+                }}
+              >
+                {syncStatusMsg}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <Button variant="subtle" onClick={() => setIsSyncModalOpen(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const count = await importPollsFromJson(syncJsonText);
+                    setSyncStatusMsg(`✅ Successfully imported and merged ${count} poll(s)!`);
+                    fetchPolls();
+                  } catch (err: any) {
+                    setSyncStatusMsg("❌ Import error: " + err.message);
+                  }
+                }}
+                disabled={!syncJsonText.trim()}
+              >
+                Import & Merge Polls
               </Button>
             </div>
           </div>

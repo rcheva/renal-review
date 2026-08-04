@@ -41,6 +41,7 @@ import {
 } from "recharts";
 import { AppHeaderContent } from "../shell/Header/Header";
 import { Poll, Question, Response } from "./types";
+import { getCachedPollAndQuestions, cachePollAndQuestions } from "./pollingStore";
 import "./PollingGlassmorphism.css";
 
 export default function LiveResultsView() {
@@ -130,27 +131,87 @@ export default function LiveResultsView() {
   };
 
   const fetchData = async () => {
-    const { data: pollData } = await supabase
-      .from("polls")
-      .select("*")
-      .eq("id", pollId)
-      .single();
-    if (pollData) setPoll(pollData as Poll);
+    if (!pollId) return;
 
-    const { data: questionData } = await supabase
-      .from("questions")
-      .select("*")
-      .eq("poll_id", pollId)
-      .order("created_at", { ascending: true });
-    if (questionData) setQuestions(questionData as Question[]);
+    // 1. Instantly load local/cached poll & questions first
+    const cached = getCachedPollAndQuestions(pollId);
+    let foundPoll: Poll | null = cached.poll || null;
+    let foundQuestions: Question[] = cached.questions || [];
 
-    if (questionData && questionData.length > 0) {
-      const qIds = questionData.map((q: any) => q.id);
-      const { data: responseData } = await supabase
-        .from("responses")
-        .select("*")
-        .in("question_id", qIds);
-      if (responseData) setResponses(responseData as Response[]);
+    if (!foundPoll) {
+      const localPollsStr = localStorage.getItem("renal_review_polls");
+      if (localPollsStr) {
+        try {
+          const localPolls = JSON.parse(localPollsStr);
+          foundPoll = localPolls.find((p: any) => p.id === pollId) || null;
+        } catch {}
+      }
+    }
+
+    if (foundQuestions.length === 0) {
+      const localQStr = localStorage.getItem(`renal_questions_${pollId}`);
+      if (localQStr) {
+        try {
+          foundQuestions = JSON.parse(localQStr);
+        } catch {}
+      }
+    }
+
+    if (foundPoll) setPoll(foundPoll);
+    if (foundQuestions.length > 0) setQuestions(foundQuestions);
+
+    // 2. Fetch from Supabase in background with timeout
+    try {
+      const fetchCloud = async () => {
+        const { data: pollData } = await supabase
+          .from("polls")
+          .select("*")
+          .eq("id", pollId)
+          .single();
+
+        let qs: Question[] = [];
+        if (pollData) {
+          const { data: questionData } = await supabase
+            .from("questions")
+            .select("*")
+            .eq("poll_id", pollId)
+            .order("created_at", { ascending: true });
+
+          if (questionData) qs = questionData as Question[];
+        }
+
+        const targetQs = qs.length > 0 ? qs : foundQuestions;
+        let resps: Response[] = [];
+        if (targetQs.length > 0) {
+          const qIds = targetQs.map((q) => q.id);
+          const { data: responseData } = await supabase
+            .from("responses")
+            .select("*")
+            .in("question_id", qIds);
+          if (responseData) resps = responseData as Response[];
+        }
+
+        return {
+          poll: pollData as Poll | null,
+          questions: qs,
+          responses: resps,
+        };
+      };
+
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 2000)
+      );
+
+      const cloudRes = await Promise.race([fetchCloud(), timeoutPromise]);
+
+      if (cloudRes) {
+        if (cloudRes.poll) setPoll(cloudRes.poll);
+        if (cloudRes.questions.length > 0) setQuestions(cloudRes.questions);
+        if (cloudRes.responses.length > 0) setResponses(cloudRes.responses);
+        if (cloudRes.poll) cachePollAndQuestions(cloudRes.poll, cloudRes.questions);
+      }
+    } catch {
+      // ignore
     }
   };
 

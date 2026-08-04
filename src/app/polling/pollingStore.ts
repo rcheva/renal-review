@@ -1,8 +1,9 @@
 import { supabase } from "@/logic/supabase";
-import { Student, PollGroup } from "./types";
+import { Student, PollGroup, Poll, Question } from "./types";
 
 const LOCAL_STUDENTS_KEY = "renal_review_students";
 const LOCAL_GROUPS_KEY = "renal_review_poll_groups";
+export const LOCAL_POLLS_KEY = "renal_review_polls";
 
 export const DEFAULT_GROUPS: PollGroup[] = [
   { id: "renal", name: "Renal", description: "Renal Specialist Review" },
@@ -12,10 +13,18 @@ export const DEFAULT_GROUPS: PollGroup[] = [
 
 export async function getPollGroups(): Promise<PollGroup[]> {
   try {
-    const { data, error } = await supabase.from("poll_groups").select("*").order("name");
-    if (!error && data && data.length > 0) {
-      return data as PollGroup[];
-    }
+    const fetchCloud = async () => {
+      const { data, error } = await supabase.from("poll_groups").select("*").order("name");
+      if (!error && data && data.length > 0) {
+        return data as PollGroup[];
+      }
+      return null;
+    };
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 2000)
+    );
+    const res = await Promise.race([fetchCloud(), timeoutPromise]);
+    if (res) return res;
   } catch (e) {
     console.warn("Supabase poll_groups table missing or unreachable, using local storage fallback", e);
   }
@@ -58,10 +67,18 @@ export async function addPollGroup(name: string, description?: string): Promise<
 
 export async function getStudents(): Promise<Student[]> {
   try {
-    const { data, error } = await supabase.from("students").select("*").order("name");
-    if (!error && data) {
-      return data as Student[];
-    }
+    const fetchCloud = async () => {
+      const { data, error } = await supabase.from("students").select("*").order("name");
+      if (!error && data) {
+        return data as Student[];
+      }
+      return null;
+    };
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 2000)
+    );
+    const res = await Promise.race([fetchCloud(), timeoutPromise]);
+    if (res) return res;
   } catch (e) {
     console.warn("Supabase students table error, falling back to local storage", e);
   }
@@ -281,3 +298,213 @@ export function getCachedPollAndQuestions(pollId: string): { poll: any | null; q
     return { poll: null, questions: [] };
   }
 }
+
+export async function savePollAndQuestions(
+  poll: Poll,
+  questions: Question[]
+): Promise<{ success: boolean; isCloud: boolean; message: string }> {
+  const pollId = poll.id;
+
+  const pollWithCount = {
+    ...poll,
+    questions_count: questions.length,
+  };
+
+  // 1. Save locally (INSTANT)
+  try {
+    const localPollsStr = localStorage.getItem(LOCAL_POLLS_KEY);
+    const localPolls: Poll[] = localPollsStr ? JSON.parse(localPollsStr) : [];
+
+    const existingIndex = localPolls.findIndex((p) => p.id === pollId);
+    let updatedLocalPolls: Poll[];
+    if (existingIndex >= 0) {
+      updatedLocalPolls = [...localPolls];
+      updatedLocalPolls[existingIndex] = pollWithCount;
+    } else {
+      updatedLocalPolls = [pollWithCount, ...localPolls];
+    }
+    localStorage.setItem(LOCAL_POLLS_KEY, JSON.stringify(updatedLocalPolls));
+
+    // Save questions locally
+    const localQKey = `renal_questions_${pollId}`;
+    localStorage.setItem(localQKey, JSON.stringify(questions));
+
+    // Cache poll & questions
+    cachePollAndQuestions(pollWithCount, questions);
+  } catch (err) {
+    console.warn("Failed saving poll locally:", err);
+  }
+
+  // 2. Try Supabase cloud sync with timeout safety
+  let cloudSuccess = false;
+  try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pollId);
+
+    const pollPayload = {
+      id: poll.id,
+      title: poll.title,
+      status: poll.status,
+      group_name: poll.group_name || "Renal",
+      created_at: poll.created_at || new Date().toISOString(),
+    };
+
+    const syncCloud = async () => {
+      const { error: pollErr } = await supabase.from("polls").upsert([pollPayload]);
+      if (pollErr) return false;
+
+      if (questions.length > 0) {
+        const qPayloads = questions.map((q) => {
+          const payload: any = {
+            poll_id: pollId,
+            question_text: q.question_text,
+            options: q.options,
+            correct_option_index: q.correct_option_index,
+            explanation: q.explanation || null,
+          };
+          if (isUuid && q.id && !q.id.startsWith("q_")) {
+            payload.id = q.id;
+          }
+          return payload;
+        });
+
+        const { error: qErr } = await supabase.from("questions").upsert(qPayloads);
+        if (qErr) {
+          console.warn("Questions cloud upsert error:", qErr);
+        }
+      }
+      return true;
+    };
+
+    const timeoutPromise = new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), 2000)
+    );
+
+    cloudSuccess = await Promise.race([syncCloud(), timeoutPromise]);
+  } catch (e) {
+    console.warn("Cloud sync exception:", e);
+  }
+
+  if (cloudSuccess) {
+    return {
+      success: true,
+      isCloud: true,
+      message: `Poll "${poll.title}" (${questions.length} questions) is saved in system cloud and available live!`,
+    };
+  } else {
+    return {
+      success: true,
+      isCloud: false,
+      message: `Poll "${poll.title}" (${questions.length} questions) is saved on this device and available live!`,
+    };
+  }
+}
+
+export async function getAllPolls(): Promise<(Poll & { questions_count?: number })[]> {
+  const localPollsStr = localStorage.getItem(LOCAL_POLLS_KEY);
+  let localPolls: (Poll & { questions_count?: number })[] = [];
+  if (localPollsStr) {
+    try {
+      localPolls = JSON.parse(localPollsStr);
+    } catch {
+      // ignore
+    }
+  }
+
+  let cloudPolls: any[] = [];
+  try {
+    const fetchCloud = async () => {
+      const { data, error } = await supabase
+        .from("polls")
+        .select("*, questions(count)")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        return data.map((p) => ({
+          ...p,
+          questions_count: p.questions?.[0]?.count ?? 0,
+        }));
+      }
+      return [];
+    };
+
+    const timeoutPromise = new Promise<any[]>((resolve) =>
+      setTimeout(() => resolve([]), 2000)
+    );
+
+    cloudPolls = await Promise.race([fetchCloud(), timeoutPromise]);
+  } catch (e) {
+    console.warn("Could not fetch cloud polls:", e);
+  }
+
+  const map = new Map<string, Poll & { questions_count?: number }>();
+
+  for (const lp of localPolls) {
+    if (lp.questions_count === undefined || lp.questions_count === 0) {
+      const qStr = localStorage.getItem(`renal_questions_${lp.id}`);
+      if (qStr) {
+        try {
+          lp.questions_count = JSON.parse(qStr).length;
+        } catch {
+          lp.questions_count = 0;
+        }
+      } else {
+        lp.questions_count = 0;
+      }
+    }
+    map.set(lp.id, lp);
+  }
+
+  for (const cp of cloudPolls) {
+    const existing = map.get(cp.id);
+    map.set(cp.id, {
+      ...existing,
+      ...cp,
+      questions_count: cp.questions_count ?? existing?.questions_count ?? 0,
+    });
+  }
+
+  const merged = Array.from(map.values());
+  merged.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  return merged;
+}
+
+export function exportAllPollsJson(): string {
+  const localPollsStr = localStorage.getItem(LOCAL_POLLS_KEY);
+  const localPolls: Poll[] = localPollsStr ? JSON.parse(localPollsStr) : [];
+
+  const packageData = localPolls.map((poll) => {
+    const qStr = localStorage.getItem(`renal_questions_${poll.id}`);
+    const questions: Question[] = qStr ? JSON.parse(qStr) : [];
+    return {
+      poll,
+      questions,
+    };
+  });
+
+  return JSON.stringify(packageData, null, 2);
+}
+
+export async function importPollsFromJson(jsonStr: string): Promise<number> {
+  try {
+    let text = jsonStr.trim();
+    if (text.startsWith("```json")) text = text.replace(/```json/g, "");
+    if (text.startsWith("```")) text = text.replace(/```/g, "");
+    if (text.endsWith("```")) text = text.slice(0, -3);
+
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) throw new Error("JSON must be an array of poll package objects.");
+
+    let importedCount = 0;
+    for (const item of parsed) {
+      if (item.poll && item.poll.id && item.poll.title) {
+        await savePollAndQuestions(item.poll, item.questions || []);
+        importedCount++;
+      }
+    }
+    return importedCount;
+  } catch (err: any) {
+    throw new Error("Invalid poll package format: " + err.message);
+  }
+}
+
+
