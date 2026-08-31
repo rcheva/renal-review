@@ -44,10 +44,30 @@
   gap: var(--spacing-xs);
 }
 
+.login-view__label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .login-view__input-group label {
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text);
+}
+
+.login-view__forgot-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-xs, 12px);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.login-view__forgot-btn:hover {
+  opacity: 0.8;
 }
 
 .login-view__input-group input {

@@ -148,7 +148,8 @@ function AppContent() {
 }
 
 export default function App() {
-  const { session, loading } = useAuthSession();
+  const { session, loading, isPasswordRecovery, setIsPasswordRecovery } =
+    useAuthSession();
 
   if (loading) {
     return null; // Or a full screen spinner
@@ -157,12 +158,15 @@ export default function App() {
   return (
     <NotificationProvider>
       <NotificationContainer />
-      {session ? (
+      {session && !isPasswordRecovery ? (
         <SyncManagerProvider>
           <AppContent />
         </SyncManagerProvider>
       ) : (
-        <LoginView />
+        <LoginView
+          initialMode={isPasswordRecovery ? "reset" : "login"}
+          onPasswordResetSuccess={() => setIsPasswordRecovery(false)}
+        />
       )}
     </NotificationProvider>
   );
